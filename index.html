@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en" translate="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="google" content="notranslate" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>EL POLLO LOCO</title>
+    <link rel="shortcut icon" href="img/favicon.png" type="image/x-icon" />
+    <link rel="stylesheet" href="css/standard.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body onload="init()">
+    <div class="game-wrapper">
+      <div class="game-container" id="fullscreen">
+        <div class="game-area" id="game-area">
+          <div class="game-area-top flex-column">
+            <div class="flex">
+              <button
+                id="sound-btn-in-game"
+                class="img-btn sound-btn sound-btn-hover"
+                onclick="enableSound()"
+              >
+                <img
+                  class="sound-img"
+                  src="img/10_controls/sound-off.png"
+                  alt="sound"
+                  title="Sound"
+                />
+              </button>
+
+              <button
+                id="pause-btn-in-game"
+                class="img-btn sound-btn sound-btn-hover"
+                onclick="pauseGame()"
+              >
+                <img
+                  id="pause-img"
+                  src="img/10_controls/pause.png"
+                  alt="pause"
+                  title="Pause"
+                />
+              </button>
+
+              <button
+                id="quit-btn-in-game"
+                class="img-btn sound-btn sound-btn-hover"
+                onclick="quitGame()"
+              >
+                <img
+                  id="stop-img"
+                  src="img/10_controls/quit.png"
+                  alt="go back"
+                  title="Quit"
+                />
+              </button>
+            </div>
+          </div>
+
+          <div class="game-area-bottom" id="game-area-bottom">
+            <div class="flex game-area-bottom-left">
+              <button id="mobile-left" class="mobile-control-btn">
+                <img
+                  src="img/10_controls/MOBILE_LEFT_icon.png"
+                  alt="left"
+                  title="Left"
+                />
+              </button>
+
+              <button id="mobile-right" class="mobile-control-btn">
+                <img
+                  src="img/10_controls/MOBILE_RIGHT_icon.png"
+                  alt="right"
+                  title="Right"
+                />
+              </button>
+            </div>
+
+            <div class="flex game-area-bottom-right">
+              <button id="mobile-jump" class="mobile-control-btn">
+                <img
+                  src="img/10_controls/MOBILE_JUMP_icon.png"
+                  alt="jump"
+                  title="Jump"
+                />
+              </button>
+
+              <button id="mobile-throw" class="mobile-control-btn">
+                <img
+                  src="img/10_controls/MOBILE_THROW_icon.png"
+                  alt="throw"
+                  title="Throw"
+                />
+              </button>
+            </div>
+          </div>
+
+          <canvas
+            style="background-color: transparent"
+            width="720"
+            height="480"
+            id="canvas"
+          ></canvas>
+
+          <div id="canvas-overlay-polo"></div>
+        </div>
+
+        <div class="screen-rotate game-screen flex d-none" id="screen-rotate">
+          <p>PLEASE ROTATE YOUR Screen TO PLAY</p>
+        </div>
+
+        <div class="screen-start game-screen" id="screen-start">
+          <button
+            class="text-btn sound-btn-hover start-game-btn"
+            onclick="startLoading()"
+          >
+            Start
+          </button>
+
+          <div class="screen-start-menu flex">
+            <button
+              class="img-btn sound-btn-hover"
+              onclick="toggleFullScreen()"
+              id="fullscreen-btn"
+            >
+              <img
+                id="full-screen-img"
+                src="img/10_controls/fullscreen_on.png"
+                alt="full screen"
+                title="Full Screen"
+              />
+            </button>
+
+            <button class="img-btn sound-btn-hover" onclick="enableSound()">
+              <img
+                class="sound-img"
+                src="img/10_controls/sound-on.png"
+                alt="sound"
+                title="Sound"
+              />
+            </button>
+
+            <button
+              class="img-btn sound-btn-hover control-btn"
+              onclick="goToControlScreen()"
+            >
+              <img
+                src="img/10_controls/control.png"
+                alt="game console"
+                title="Rules"
+              />
+            </button>
+
+            <button
+              class="img-btn sound-btn-hover story-btn"
+              onclick="goToBgstoryScreen()"
+            >
+              <img
+                src="img/10_controls/story2.png"
+                alt="story"
+                title="Background Story"
+              />
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="screen-loading d-none game-screen flex-column"
+          id="screen-loading"
+        >
+          <div class="img-div">
+            <img
+              src="img/3_enemies_chicken/chicken_small/Muestra gif.gif"
+              alt=""
+            />
+          </div>
+          <button class="loading-btn" id="loading-btn">Loading...</button>
+        </div>
+
+        <div
+          class="screen--story d-none game-screen flex-column"
+          id="screen--story"
+        >
+          <button
+            class="img-btn sound-btn sound-btn-hover go-back-btn"
+            onclick="storyScreenGoBack()"
+          >
+            <img src="img/10_controls/back.png" alt="go back" />
+          </button>
+
+          <div class="story-container">
+            <p id="story-p">Hello, Adventurer, welcome to EL POLLO LOCO.</p>
+          </div>
+
+          <button
+            id="skip-btn"
+            class="text-btn sound-btn sound-btn-hover skipTyping-btn"
+            onclick="skipTyping()"
+          >
+            Skip
+          </button>
+        </div>
+
+        <div
+          class="screen-controls d-none game-screen flex"
+          id="screen-controls"
+        >
+          <button
+            class="img-btn sound-btn sound-btn-hover go-back-btn"
+            onclick="goBackToStartScreen()"
+          >
+            <img src="img/10_controls/back.png" alt="go back" />
+          </button>
+
+          <div class="screen-controls-container flex-column">
+            <div class="screen-controls-title">HOW TO PLAY</div>
+            <div class="screen-controls-game-container flex-column">
+              <div class="screen-controls-row">
+                <span>LEFT &nbsp;&nbsp;&nbsp;:</span>
+                <span>A</span>
+              </div>
+              <div class="screen-controls-row">
+                <span>RIGHT &nbsp;:</span>
+                <span>D</span>
+              </div>
+              <div class="screen-controls-row">
+                <span>JUMP &nbsp;&nbsp;:</span>
+                <span>W</span>
+              </div>
+              <div class="screen-controls-row">
+                <span>Shoot &nbsp;:</span>
+                <span>J</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="screen-end screen-lose game-screen flex"
+          id="screen-end-lose"
+        >
+          <button
+            class="text-btn sound-btn sound-btn-hover"
+            onclick="playAgain()"
+          >
+            Once Again
+          </button>
+          <button
+            class="text-btn sound-btn sound-btn-hover"
+            onclick="goBackToHome()"
+          >
+            Home
+          </button>
+        </div>
+
+        <div
+          class="screen-end screen-win d-none game-screen flex"
+          id="screen-end-win"
+        >
+          <button
+            class="text-btn sound-btn sound-btn-hover d-none"
+            onclick="playAgain()"
+          >
+            Once Again
+          </button>
+          <button
+            class="text-btn sound-btn sound-btn-hover d-none"
+            onclick="goBackToHome()"
+          >
+            Home
+          </button>
+        </div>
+
+        <div class="confirm-dialog d-none game-screen flex" id="confirm-dialog">
+          <div class="confirm-overlay in-screen-overlay"></div>
+          <div class="confirm-dialog-box flex-column">
+            <p>Are you sure to leave?</p>
+            <div class="flex">
+              <button
+                class="text-btn sound-btn sound-btn-hover"
+                onclick="resumeGame()"
+              >
+                Resume
+              </button>
+              <button
+                id="quit-btn"
+                class="text-btn sound-btn sound-btn-hover"
+                onclick="goBackToHome()"
+              >
+                Quit
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button
+        id="legal-notice-btn"
+        class="legal-notice pointer"
+        onclick="window.location.href = 'legal-notice.html'"
+      >
+        Legal Notice
+      </button>
+    </div>
+    <script src="forms/natur.js"></script>
+    <script src="forms/bottle.js"></script>
+    <script src="forms/coins.js"></script>
+    <script src="forms/boss.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/screen.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/player.js"></script>
+    <script src="forms/enemy.js"></script>
+    <script src="forms/groundbottle.js"></script>
+    <script src="forms/smallEnemy.js"></script>
+    <script src="forms/cloud.js"></script>
+
+    <script src="helpers/collision.js"></script>
+    <script src="helpers/camera.js"></script>
+    <script src="js/game.js"></script>
+  </body>
+</html>

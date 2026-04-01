@@ -1,0 +1,659 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  list-style: none;
+}
+
+:root {
+  --glass: rgba(0, 0, 0, 0.28);
+  --glass-strong: rgba(0, 0, 0, 0.4);
+  --panel: rgba(255, 255, 255, 0.86);
+  --panel-2: rgba(255, 255, 255, 0.72);
+  --shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
+  --shadow-soft: 0 8px 18px rgba(0, 0, 0, 0.18);
+
+  --radius: 18px;
+  --radius-sm: 14px;
+
+  --text: #111;
+  --white: #fff;
+  --accent: rgb(123, 73, 250);
+}
+
+/* ==========================
+   BASE
+   ========================== */
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  background: url("img/desert.jpg") center / cover no-repeat;
+  overflow: hidden;
+
+  display: flex;
+  justify-content: center;
+  /* align-items: center; */
+}
+
+/* ==========================
+   LAYOUT
+   ========================== */
+.game-wrapper {
+  width: 100vw;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  text-align: center;
+}
+
+/* Die echte Spielbox */
+.game-container {
+  position: relative;
+  width: min(960px, 96vw);
+  aspect-ratio: 3 / 2;
+  height: auto;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #00000010;
+}
+
+/* Fullscreen-Element */
+#fullscreen {
+  width: 100%;
+  height: 100%;
+}
+
+/* sichtbarer Spielbereich */
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 10;
+}
+
+/* Canvas */
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+}
+
+/* ==========================
+   LEGAL NOTICE
+   ========================== */
+.game-wrapper > button {
+  background: transparent;
+  border: 0;
+  font-family: "Courier New", Courier, monospace;
+  text-decoration: underline;
+  font-size: 16px;
+  font-weight: 900;
+  color: #111;
+  cursor: pointer;
+}
+
+.game-wrapper > button:hover {
+  color: var(--accent);
+}
+
+/* ==========================
+   UTILS
+   ========================== */
+.flex {
+  display: flex;
+  align-items: center;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.d-none {
+  display: none !important;
+}
+
+/* ==========================
+   OVERLAY
+   ========================== */
+#canvas-overlay-polo {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  pointer-events: none;
+  display: none;
+  z-index: 50;
+}
+
+.game-area.show-overlay #canvas-overlay-polo {
+  display: block;
+}
+
+/* ==========================
+   END STATS
+   ========================== */
+.end-stats {
+  margin-top: 18px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #111;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  box-shadow: var(--shadow-soft);
+}
+
+/* ==========================
+   TOP BAR
+   ========================== */
+.game-area-top {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 0;
+  width: 100%;
+  padding: 0 14px;
+  z-index: 200;
+}
+
+.game-area-top .flex {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ==========================
+   STANDARD BUTTONS
+   ========================== */
+.img-btn,
+.text-btn,
+.mobile-control-btn {
+  border: 0;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.img-btn:hover,
+.text-btn:hover,
+.mobile-control-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.img-btn:active,
+.text-btn:active,
+.mobile-control-btn:active {
+  transform: translateY(1px) scale(0.98);
+  filter: brightness(0.95);
+}
+
+.img-btn:focus-visible,
+.text-btn:focus-visible,
+.mobile-control-btn:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.img-btn {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(224, 221, 16, 0.82);
+}
+
+.img-btn img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.text-btn {
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 900;
+  color: var(--white);
+  background: rgba(214, 126, 26, 0.763);
+}
+
+/* ==========================
+   MOBILE CONTROLS
+   ========================== */
+.game-area-bottom {
+  position: absolute;
+  inset: 0;
+  z-index: 220;
+  display: none;
+  pointer-events: none;
+}
+
+.game-area-bottom-left,
+.game-area-bottom-right {
+  position: absolute;
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.game-area-bottom-left {
+  left: 12px;
+  bottom: 12px;
+  flex-direction: row;
+}
+
+.game-area-bottom-right {
+  right: 12px;
+  bottom: 12px;
+  flex-direction: row;
+}
+
+.mobile-control-btn {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 183, 65, 0.96),
+    rgba(232, 142, 26, 0.96)
+  );
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.28),
+    inset 0 2px 5px rgba(255, 255, 255, 0.25);
+  touch-action: none;
+}
+
+.mobile-control-btn img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+/* optional state */
+.is-on {
+  filter: drop-shadow(0 0 10px rgba(0, 255, 120, 0.35));
+}
+
+.is-off {
+  opacity: 0.78;
+}
+
+/* ==========================
+   GAME SCREENS
+   ========================== */
+.game-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+}
+
+.screen-rotate {
+  background: rgba(255, 255, 255, 0) center / 100% 100% no-repeat
+    url("img/5_background/first_half_background.png");
+  display: grid;
+  place-items: center;
+}
+
+.screen-rotate p {
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(1.6rem, 3vw, 3rem);
+  text-align: center;
+  font-weight: 900;
+  color: #111;
+  padding: 16px;
+  background: var(--panel-2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.screen-start {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  pointer-events: auto;
+  background: center / 100% 100% no-repeat
+    url("img/9_intro_outro_screens/start/startscreen_1.png");
+}
+
+.screen-start .start-game-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 600;
+}
+
+.screen-start .screen-start-menu {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  gap: 10px;
+}
+
+.screen-start .screen-start-menu .text-btn,
+.screen-start .start-game-btn {
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+}
+
+/* Loading */
+.screen-loading {
+  background: rgba(255, 255, 255, 0.95);
+  display: grid;
+  place-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.screen-loading .img-div img {
+  width: 120px;
+  height: auto;
+}
+
+.screen-loading .loading-btn {
+  background: rgba(0, 0, 0, 0.55);
+  padding: 10px 14px;
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  border-radius: 12px;
+  min-width: 220px;
+}
+
+/* Story / Controls background */
+.screen--story,
+.screen-controls {
+  background: center / 100% 100% no-repeat
+    url("img/5_background/first_half_background.png");
+}
+
+/* Story */
+.story-container {
+  background: var(--panel);
+  width: calc(100% - 40px);
+  margin: 70px auto 0 auto;
+  border-radius: var(--radius);
+  max-height: calc(100% - 140px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.story-container p {
+  padding: 16px;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.story-container p::after {
+  content: "|";
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.screen--story .skipTyping-btn {
+  position: absolute;
+  left: 51px;
+  top: 35px;
+}
+
+/* Controls */
+.screen-controls .go-back-btn {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+}
+
+.screen-controls-container {
+  width: min(320px, 92vw);
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  gap: 14px;
+  box-shadow: var(--shadow);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.screen-controls-title {
+  font-size: 30px;
+  color: #111;
+}
+
+.screen-controls-game-container {
+  width: 100%;
+  gap: 6px;
+}
+
+.screen-controls-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  font-size: 16px;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 900;
+}
+
+/* End screens */
+.screen-end.screen-lose,
+.screen-end.screen-win {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-direction: column;
+}
+
+.screen-end.screen-lose {
+  background: center / 70% 70% no-repeat
+    url("img/You won, you lost/You lost.png");
+}
+
+.screen-end.screen-win {
+  background: center / 80% 80% no-repeat
+    url("img/You won, you lost/You Win A.png");
+}
+
+.screen-end.screen-lose > button,
+.screen-end.screen-win > button {
+  position: static;
+}
+
+/* Confirm */
+.confirm-dialog {
+  display: grid;
+  place-items: center;
+}
+
+.confirm-dialog-box {
+  gap: 16px;
+  padding: 18px;
+  z-index: 1;
+  box-shadow: var(--shadow);
+  background: var(--panel);
+  border-radius: var(--radius);
+  min-width: min(360px, 92vw);
+}
+
+.confirm-dialog-box > div {
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-dialog-box > p {
+  font-size: 1.2rem;
+  color: #111;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 900;
+}
+
+.confirm-dialog-box > div > button {
+  position: static;
+}
+
+#quit-btn {
+  background: rgba(210, 81, 81, 0.85);
+}
+
+/* ==========================
+   RESPONSIVE
+   ========================== */
+
+/* Landscape mobile/tablet */
+@media only screen and (max-width: 1024px) and (orientation: landscape) {
+  .legal-notice {
+    display: none;
+  }
+
+  .game-container {
+    width: 100vw;
+    height: 100dvh;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+}
+
+/* Tablet */
+@media only screen and (max-width: 1024px) and (min-width: 761px) {
+  .game-area-bottom {
+    display: block !important;
+  }
+
+  .game-area-bottom-left {
+    left: 16px;
+    bottom: 16px;
+  }
+
+  .game-area-bottom-right {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .mobile-control-btn {
+    width: 68px;
+    height: 68px;
+  }
+
+  .mobile-control-btn img {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Mobile portrait:
+   HIER liegt der eigentliche Fix:
+   Spielbox bleibt 3:2 und wird mittig angezeigt.
+*/
+@media only screen and (max-width: 760px) and (orientation: portrait) {
+  .game-container {
+    width: calc(100vw - 16px);
+    aspect-ratio: 3 / 2;
+    height: auto;
+    max-height: calc(100dvh - 20px);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .game-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .game-area-bottom {
+    display: block !important;
+  }
+
+  .game-area-bottom-left {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+  }
+
+  .game-area-bottom-right {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+  }
+}
+
+/* Very small screens */
+@media only screen and (max-width: 500px) and (orientation: portrait) {
+  .game-container {
+    width: min(100vw - 12px, calc((100dvh - 24px) * 3 / 2));
+    max-height: calc(100dvh - 24px);
+    border-radius: 14px;
+  }
+
+  .screen-rotate p {
+    font-size: 1.5rem;
+  }
+
+  .game-area-bottom-left {
+    left: 6px;
+    bottom: 6px;
+  }
+
+  .game-area-bottom-right {
+    right: 6px;
+    bottom: 6px;
+  }
+
+  .mobile-control-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .mobile-control-btn img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Low height */
+@media only screen and (max-height: 480px) {
+  .legal-notice {
+    display: none;
+  }
+}

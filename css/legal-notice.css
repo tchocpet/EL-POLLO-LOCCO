@@ -1,0 +1,165 @@
+html,
+body {
+  height: auto;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background-repeat: repeat;
+  font-family: "Courier New", Courier, monospace;
+  color: black;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block;
+}
+
+.legal-notice-container {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 50px;
+}
+
+.content {
+  background: rgba(151, 214, 5, 0.88);
+  border-radius: 18px;
+  padding: 40px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+
+.return {
+  width: 48px;
+  height: 48px;
+  position: absolute;
+  left: 55px;
+  top: 55px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.return:hover {
+  transform: scale(1.08);
+}
+
+.legal-notice-container h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 42px;
+}
+
+.legal-notice-container h2 {
+  margin: 18px 0 10px;
+  font-size: 28px;
+}
+
+.legal-notice-container h3 {
+  margin: 16px 0 8px;
+  font-size: 22px;
+}
+
+.legal-notice-container h4 {
+  margin: 14px 0 6px;
+  font-size: 18px;
+}
+
+.legal-notice-subcontainer {
+  margin-top: 28px;
+}
+
+.legal-notice-container p {
+  margin: 10px 0;
+}
+
+.legal-notice-container ul {
+  margin: 12px 0 12px 20px;
+  padding-left: 20px;
+}
+
+.legal-notice-container li {
+  list-style: disc;
+  margin: 8px 0;
+}
+
+.legal-notice-container a {
+  color: #7b49fa;
+  word-break: break-word;
+}
+
+.link {
+  margin-top: 20px;
+  font-size: 15px;
+}
+
+/* Tablet */
+@media screen and (max-width: 900px) {
+  .legal-notice-container {
+    padding: 20px;
+  }
+
+  .content {
+    padding: 28px 20px;
+  }
+
+  .legal-notice-container h1 {
+    font-size: 32px;
+  }
+
+  .legal-notice-container h2 {
+    font-size: 25px;
+  }
+
+  .legal-notice-container h3 {
+    font-size: 20px;
+  }
+
+  .return {
+    width: 32px;
+    height: 32px;
+    left: 24px;
+    top: 24px;
+  }
+}
+
+/* Mobile */
+@media screen and (max-width: 400px) {
+  .legal-notice-container {
+    padding: 14px;
+  }
+
+  .content {
+    padding: 20px 14px;
+    border-radius: 14px;
+  }
+
+  .legal-notice-container h1 {
+    font-size: 25px;
+    letter-spacing: normal;
+  }
+
+  .legal-notice-container h2 {
+    font-size: 22px;
+  }
+
+  .legal-notice-container h3 {
+    font-size: 18px;
+  }
+
+  .legal-notice-container h4 {
+    font-size: 16px;
+  }
+
+  .legal-notice-container p,
+  .legal-notice-container li {
+    font-size: 14px;
+  }
+
+  .return {
+    width: 24px;
+    height: 24px;
+    left: 14px;
+    top: 14px;
+  }
+}
