@@ -1,6 +1,19 @@
+/**
+ * Main game logic for El Pollo Loco.
+ * Handles initialization, game loop, rendering, input, and state management.
+ * @file game.js
+ */
 (function () {
+  /**
+   * Shortcut for getElementById.
+   * @param {string} id - Element ID
+   * @returns {HTMLElement|null}
+   */
   const $ = (id) => document.getElementById(id);
 
+  /**
+   * Stores loaded assets (images, sounds).
+   */
   const ASSETS = {
     sky: null,
     layer3: null,
@@ -8,8 +21,12 @@
     layer1: null,
     playerWalk: [],
     playerIdle: null,
+    walkSoundCooldown: 0,
   };
 
+  /**
+   * Paths to images and audio files used in the game.
+   */
   const PATHS = {
     bg: {
       sky: "img/5_background/layers/air.png",
@@ -33,9 +50,13 @@
       throw: "audio/bottle_throw.mp3",
       hurt: "audio/hurt.mp3",
       bossHit: "audio/chicken_hurt.mp3",
+      walk: "audio/running.wav",
     },
   };
 
+  /**
+   * Main application state object.
+   */
   const App = {
     running: false,
     paused: false,
@@ -102,78 +123,13 @@
       throw: null,
       hurt: null,
       bossHit: null,
+      walk: null,
     },
   };
 
   /**
-   * Lädt ein Bild.
-   * @param {string} src - Bildpfad
-   * @returns {Promise<HTMLImageElement>}
-   */
-  function loadImage(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Image failed: " + src));
-      img.src = src;
-    });
-  }
-
-  /**
-   * Erstellt Audio.
-   * @param {string} src - Audio-Pfad
-   * @returns {HTMLAudioElement}
-   */
-  function createAudio(src) {
-    const audio = new Audio(src);
-    audio.preload = "auto";
-    return audio;
-  }
-
-  /**
-   * Gibt Screen API zurück.
-   * @returns {object}
-   */
-  function getScreenApi() {
-    if (window.Screen) {
-      return window.Screen;
-    }
-
-    return {
-      hideAll() {
-        document
-          .querySelectorAll(".game-screen")
-          .forEach((el) => el.classList.add("d-none"));
-      },
-      showById(id) {
-        this.hideAll();
-        $(id)?.classList.remove("d-none");
-      },
-      overlay(on) {
-        document
-          .querySelector(".game-area")
-          ?.classList.toggle("show-overlay", !!on);
-      },
-      setPauseIcon(paused) {
-        const img = $("pause-img");
-        if (!img) return;
-        img.src = paused
-          ? "img/10_controls/continue.png"
-          : "img/10_controls/pause.png";
-      },
-      setSoundIcons(on) {
-        document.querySelectorAll(".sound-img").forEach((img) => {
-          img.src = on
-            ? "img/10_controls/sound-on.png"
-            : "img/10_controls/sound-off.png";
-        });
-      },
-    };
-  }
-
-  /**
-   * Prüft Canvas.
-   * @returns {boolean}
+   * Checks and initializes the canvas element.
+   * @returns {boolean} True if canvas is ready, false otherwise.
    */
   function ensureCanvasReady() {
     App.canvas = $("canvas");
@@ -191,11 +147,10 @@
   }
 
   /**
-   * Initialisiert das Spiel.
+   * Initializes the game and sets up the player and event bindings.
    */
   function init() {
     if (!ensureCanvasReady()) {
-      console.error("Canvas konnte nicht initialisiert werden.");
       return;
     }
 
@@ -206,39 +161,23 @@
     if (!App.eventsBound) {
       bindKeyboard();
       bindMobile();
-      window.addEventListener("resize", resizeCanvasToWindow);
       App.eventsBound = true;
     }
 
-    resizeCanvasToWindow();
-
-    const screens = getScreenApi();
-    screens.hideAll();
-    screens.showById("screen-start");
-    screens.overlay(false);
-    screens.setPauseIcon(false);
-    screens.setSoundIcons(App.soundOn);
-  }
-
-  // Funktionen global verfügbar machen
-  window.init = init;
-  window.startLoading = startLoading;
-
-  /**
-   * Passt Canvas CSS an.
-   */
-  function resizeCanvasToWindow() {
-    if (!App.canvas) return;
+    window.Screen.hideAll();
+    window.Screen.showById("screen-start");
+    window.Screen.overlay(false);
+    window.Screen.setPauseIcon(false);
+    window.Screen.setSoundIcons(App.soundOn);
   }
 
   /**
-   * Startet Loading Screen.
+   * Starts the loading screen and triggers game start after a delay.
    */
   function startLoading() {
     if (App.running) return;
 
-    const screens = getScreenApi();
-    screens.showById("screen-loading");
+    window.Screen.showById("screen-loading");
 
     const btn = $("loading-btn");
     if (btn) btn.textContent = "Loading.....";
@@ -247,7 +186,7 @@
   }
 
   /**
-   * Startet das Spiel.
+   * Starts the game, loads assets, resets state, and begins the main loop.
    */
   async function startGame() {
     if (!ensureCanvasReady()) return;
@@ -255,19 +194,18 @@
     App.running = true;
     App.paused = false;
 
-    const screens = getScreenApi();
-    screens.hideAll();
-    screens.overlay(false);
-    screens.setPauseIcon(false);
+    window.Screen.hideAll();
+    window.Screen.overlay(false);
+    window.Screen.setPauseIcon(false);
 
     await ensureAssets();
     resetGameState();
-    spawnClouds();
-    spawnEnemies();
-    spawnCoins();
-    spawnGroundBottles();
-    spawnEndboss();
-    startBackgroundMusic();
+    spawnClouds(App);
+    spawnEnemies(App);
+    spawnCoins(App);
+    spawnGroundBottles(App);
+    spawnEndboss(App);
+    startBackgroundMusic(App);
 
     App.canvas.focus();
 
@@ -277,7 +215,7 @@
   }
 
   /**
-   * Lädt Assets.
+   * Loads all required assets (images, audio) for the game.
    */
   async function ensureAssets() {
     if (!ASSETS.sky) {
@@ -328,79 +266,24 @@
       }
     }
 
-    ensureAudio();
+    ensureAudio(App, PATHS);
   }
 
   /**
-   * Initialisiert Audio.
+   * Safely plays a sound if audio is enabled.
+   * @param {HTMLAudioElement|null} audio - Audio element to play
    */
-  function ensureAudio() {
-    if (App.audio.bgMusic) return;
-
-    App.audio.bgMusic = createAudio(PATHS.audio.bgMusic);
-    App.audio.coin = createAudio(PATHS.audio.coin);
-    App.audio.bottleCollect = createAudio(PATHS.audio.bottleCollect);
-    App.audio.throw = createAudio(PATHS.audio.throw);
-    App.audio.hurt = createAudio(PATHS.audio.hurt);
-    App.audio.bossHit = createAudio(PATHS.audio.bossHit);
-
-    App.audio.bgMusic.loop = true;
-    App.audio.bgMusic.volume = 0.25;
-
-    App.audio.coin.volume = 0.35;
-    App.audio.bottleCollect.volume = 0.35;
-    App.audio.throw.volume = 0.35;
-    App.audio.hurt.volume = 0.35;
-    App.audio.bossHit.volume = 0.35;
-
-    applyMuteState();
-  }
-
-  /**
-   * Setzt Mute-Zustand.
-   */
-  function applyMuteState() {
-    const muted = !App.soundOn;
-
-    Object.values(App.audio).forEach((audio) => {
-      if (!audio) return;
-      audio.muted = muted;
-    });
-  }
-
-  /**
-   * Spielt Sound sicher ab.
-   * @param {HTMLAudioElement|null} audio - Audio
-   */
-  function safePlay(audio) {
+  window.safePlay = function (audio) {
     if (!audio || !App.soundOn) return;
 
     try {
       audio.currentTime = 0;
       audio.play().catch(() => {});
     } catch (_) {}
-  }
+  };
 
   /**
-   * Startet Hintergrundmusik.
-   */
-  function startBackgroundMusic() {
-    if (!App.audio.bgMusic || !App.soundOn) return;
-    App.audio.bgMusic.currentTime = 0;
-    App.audio.bgMusic.play().catch(() => {});
-  }
-
-  /**
-   * Stoppt Hintergrundmusik.
-   */
-  function stopBackgroundMusic() {
-    if (!App.audio.bgMusic) return;
-    App.audio.bgMusic.pause();
-    App.audio.bgMusic.currentTime = 0;
-  }
-
-  /**
-   * Setzt Spielzustand zurück.
+   * Resets the game state to initial values for a new game.
    */
   function resetGameState() {
     if (!App.player) {
@@ -436,124 +319,10 @@
     App.bossPhaseTextTime = 0;
     App.gameWon = false;
   }
-  /**
-   * Erzeugt Endboss.
-   */
-  function spawnEndboss() {
-    App.endboss = new Boss(App.world.levelW - 360, App.world.groundY - 280);
-
-    App.bossHealth = 100;
-    App.maxBossHealth = 100;
-    App.bossActive = false;
-  }
 
   /**
-   * Erzeugt Coins.
-   */
-  function spawnCoins() {
-    App.coins = [];
-
-    const positions = [
-      { x: 260, y: App.world.groundY - 120 },
-      { x: 320, y: App.world.groundY - 165 },
-      { x: 380, y: App.world.groundY - 120 },
-
-      { x: 760, y: App.world.groundY - 100 },
-      { x: 820, y: App.world.groundY - 140 },
-      { x: 880, y: App.world.groundY - 180 },
-      { x: 940, y: App.world.groundY - 140 },
-      { x: 1000, y: App.world.groundY - 100 },
-
-      { x: 1420, y: App.world.groundY - 120 },
-      { x: 1500, y: App.world.groundY - 120 },
-
-      { x: 1960, y: App.world.groundY - 110 },
-      { x: 2020, y: App.world.groundY - 150 },
-      { x: 2080, y: App.world.groundY - 110 },
-
-      { x: 2550, y: App.world.groundY - 130 },
-      { x: 2630, y: App.world.groundY - 170 },
-      { x: 2710, y: App.world.groundY - 130 },
-    ];
-
-    positions.forEach((pos) => {
-      App.coins.push(new Coin(pos.x, pos.y));
-    });
-
-    App.maxCoins = App.coins.length;
-  }
-
-  /**
-   * Erzeugt Gegner.
-   */
-  function spawnEnemies() {
-    App.enemies = [];
-
-    const bigEnemies = [
-      { x: 700, y: App.world.groundY - 75 },
-      { x: 1500, y: App.world.groundY - 75 },
-      { x: 2300, y: App.world.groundY - 75 },
-    ];
-
-    const smallEnemies = [
-      { x: 1050, y: App.world.groundY - 42 },
-      { x: 1850, y: App.world.groundY - 42 },
-      { x: 2550, y: App.world.groundY - 42 },
-    ];
-
-    bigEnemies.forEach((pos) => {
-      App.enemies.push(new Enemy(pos.x, pos.y, "big"));
-    });
-
-    smallEnemies.forEach((pos) => {
-      App.enemies.push(new Enemy(pos.x, pos.y, "small"));
-    });
-  }
-
-  /**
-   * Erzeugt Bodenflaschen.
-   */
-  function spawnGroundBottles() {
-    App.groundBottles = [];
-
-    const positions = [
-      { x: 320, y: App.world.groundY - 52 },
-      { x: 520, y: App.world.groundY - 52 },
-      { x: 760, y: App.world.groundY - 52 },
-      { x: 980, y: App.world.groundY - 52 },
-      { x: 1180, y: App.world.groundY - 52 },
-      { x: 1380, y: App.world.groundY - 52 },
-      { x: 1580, y: App.world.groundY - 52 },
-      { x: 1780, y: App.world.groundY - 52 },
-      { x: 1980, y: App.world.groundY - 52 },
-      { x: 2180, y: App.world.groundY - 52 },
-      { x: 2380, y: App.world.groundY - 52 },
-      { x: 2580, y: App.world.groundY - 52 },
-      { x: 2780, y: App.world.groundY - 52 },
-      { x: 2950, y: App.world.groundY - 52 },
-      { x: 3100, y: App.world.groundY - 52 },
-    ];
-
-    positions.forEach((pos) => {
-      App.groundBottles.push(new GroundBottle(pos.x, pos.y));
-    });
-  }
-
-  /**
-   * Erzeugt Wolken.
-   */
-  function spawnClouds() {
-    App.clouds = [
-      new Cloud(0),
-      new Cloud(900),
-      new Cloud(1800),
-      new Cloud(2700),
-    ];
-  }
-
-  /**
-   * Hauptloop.
-   * @param {number} now - Zeitstempel
+   * Main game loop. Updates and renders the game each frame.
+   * @param {number} now - Timestamp
    */
   function loop(now) {
     if (!App.running) return;
@@ -572,10 +341,24 @@
     App.rafId = requestAnimationFrame(loop);
   }
 
+  function enableSound() {
+    App.soundOn = !App.soundOn;
+    localStorage.setItem("soundOn", String(App.soundOn));
+
+    applyMuteState(App);
+    window.Screen.setSoundIcons(App.soundOn);
+
+    if (App.soundOn) {
+      startBackgroundMusic(App);
+    } else {
+      stopBackgroundMusic(App);
+    }
+  }
+
   /**
-   * Update pro Frame.
-   * @param {number} dtMs - Delta ms
-   * @param {number} dtSec - Delta sec
+   * Updates game state for each frame.
+   * @param {number} dtMs - Delta time in ms
+   * @param {number} dtSec - Delta time in seconds
    */
   function update(dtMs, dtSec) {
     const introInput =
@@ -598,17 +381,18 @@
     updateEndboss(dtMs, dtSec);
     updateCoins(dtMs);
     updateGroundBottles(dtMs);
-    handleBottleEnemyHits();
-    handleBottleBossHits();
-    checkPlayerEnemyHits(nowMs());
-    checkPlayerBossHit(nowMs());
-    checkCoinCollection();
-    checkBottleCollection();
+    updateWalkSound(dtSec);
+    handleBottleEnemyHits(App);
+    handleBottleBossHits(App);
+    checkPlayerEnemyHits(App, nowMs());
+    checkPlayerBossHit(App, nowMs());
+    checkCoinCollection(App);
+    checkBottleCollection(App);
   }
 
   /**
-   * Aktualisiert Screen Shake.
-   * @param {number} dtSec - Delta sec
+   * Updates the screen shake effect.
+   * @param {number} dtSec - Delta time in seconds
    */
   function updateScreenShake(dtSec) {
     if (App.world.shakeTime > 0) {
@@ -624,8 +408,8 @@
   }
 
   /**
-   * Aktualisiert Bottle-Wurf.
-   * @param {number} dtSec - Delta sec
+   * Updates bottle throwing logic and cooldown.
+   * @param {number} dtSec - Delta time in seconds
    */
   function updateBottleThrow(dtSec) {
     if (App.fireCooldown > 0) {
@@ -645,7 +429,27 @@
   }
 
   /**
-   * Erzeugt Projektil.
+   * Handles walk sound playback and cooldown.
+   * @param {number} dtSec - Delta time in seconds
+   */
+  function updateWalkSound(dtSec) {
+    if (!App.player || App.paused) return;
+
+    if (App.walkSoundCooldown > 0) {
+      App.walkSoundCooldown -= dtSec;
+    }
+
+    const isWalking = App.player.onGround && Math.abs(App.player.vx) > 1;
+
+    if (!isWalking) return;
+    if (App.walkSoundCooldown > 0) return;
+
+    safePlay(App.audio.walk);
+    App.walkSoundCooldown = 0.25;
+  }
+
+  /**
+   * Creates and throws a new bottle projectile.
    */
   function throwBottle() {
     const p = App.player;
@@ -660,8 +464,8 @@
   }
 
   /**
-   * Aktualisiert Projektile.
-   * @param {number} dtSec - Delta sec
+   * Updates all active projectiles.
+   * @param {number} dtSec - Delta time in seconds
    */
   function updateProjectiles(dtSec) {
     App.projectiles.forEach((bottle) => {
@@ -672,8 +476,8 @@
   }
 
   /**
-   * Aktualisiert Wolken.
-   * @param {number} dtSec - Delta sec
+   * Updates all clouds.
+   * @param {number} dtSec - Delta time in seconds
    */
   function updateClouds(dtSec) {
     App.clouds.forEach((cloud) => {
@@ -682,8 +486,8 @@
   }
 
   /**
-   * Zeichnet Projektile.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws all active projectiles.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawProjectiles(ctx) {
     App.projectiles.forEach((bottle) => {
@@ -692,9 +496,9 @@
   }
 
   /**
-   * Aktualisiert Gegner.
-   * @param {number} dtMs - Delta ms
-   * @param {number} dtSec - Delta sec
+   * Updates all enemies.
+   * @param {number} dtMs - Delta time in ms
+   * @param {number} dtSec - Delta time in seconds
    */
   function updateEnemies(dtMs, dtSec) {
     App.enemies.forEach((enemy) => {
@@ -705,9 +509,9 @@
   }
 
   /**
-   * Aktualisiert Endboss.
-   * @param {number} dtMs - Delta ms
-   * @param {number} dtSec - Delta sec
+   * Updates the endboss state and phase.
+   * @param {number} dtMs - Delta time in ms
+   * @param {number} dtSec - Delta time in seconds
    */
   function updateEndboss(dtMs, dtSec) {
     const boss = App.endboss;
@@ -733,8 +537,8 @@
   }
 
   /**
-   * Aktualisiert Coins.
-   * @param {number} dtMs - Delta ms
+   * Updates all coins.
+   * @param {number} dtMs - Delta time in ms
    */
   function updateCoins(dtMs) {
     App.coins.forEach((coin) => {
@@ -743,8 +547,8 @@
   }
 
   /**
-   * Aktualisiert Bodenflaschen.
-   * @param {number} dtMs - Delta ms
+   * Updates all ground bottles.
+   * @param {number} dtMs - Delta time in ms
    */
   function updateGroundBottles(dtMs) {
     App.groundBottles.forEach((bottle) => {
@@ -753,141 +557,7 @@
   }
 
   /**
-   * Bottle vs Enemy.
-   */
-  function handleBottleEnemyHits() {
-    App.projectiles.forEach((bottle) => {
-      App.enemies.forEach((enemy) => {
-        if (enemy.dead || bottle.dead || bottle.splashing) return;
-        if (!isColliding(bottle, enemy)) return;
-
-        enemy.die();
-        bottle.startSplash(enemy.y + enemy.h - bottle.h / 2);
-        App.killedEnemies += 1;
-      });
-    });
-  }
-
-  /**
-   * Bottle vs Boss.
-   */
-  function handleBottleBossHits() {
-    const boss = App.endboss;
-    if (!boss || boss.dead) return;
-
-    App.projectiles.forEach((bottle) => {
-      if (bottle.dead || bottle.splashing) return;
-      if (!isColliding(bottle, boss)) return;
-
-      bottle.startSplash(boss.y + boss.h * 0.6);
-      App.bossHealth = Math.max(0, App.bossHealth - 20);
-      App.world.shakeTime = 0.18;
-      boss.takeHit();
-      safePlay(App.audio.bossHit);
-    });
-
-    if (App.bossHealth <= 0) {
-      boss.die();
-      setTimeout(() => {
-        winGame();
-      }, 900);
-    }
-  }
-
-  /**
-   * Player vs Enemy.
-   * @param {number} currentTime - Zeit
-   */
-  function checkPlayerEnemyHits(currentTime) {
-    App.enemies.forEach((enemy) => {
-      if (enemy.dead) return;
-      if (!isColliding(App.player, enemy)) return;
-
-      if (isStompHit(App.player, enemy)) {
-        enemy.die();
-        App.player.vy = -320;
-        App.killedEnemies += 1;
-        return;
-      }
-
-      if (!canTakeDamage(currentTime)) return;
-
-      const damage = enemy.type === "big" ? 30 : 20;
-      App.playerHealth = Math.max(0, App.playerHealth - damage);
-      App.lastHitTime = currentTime;
-      App.world.shakeTime = 0.15;
-      App.player.takeHit();
-      safePlay(App.audio.hurt);
-
-      if (App.playerHealth <= 0) {
-        loseGame();
-      }
-    });
-
-    App.enemies = App.enemies.filter((enemy) => !enemy.dead);
-  }
-
-  /**
-   * Player vs Boss.
-   * @param {number} currentTime - Zeit
-   */
-  function checkPlayerBossHit(currentTime) {
-    const boss = App.endboss;
-    if (!boss || boss.dead) return;
-    if (!isColliding(App.player, boss)) return;
-    if (!canTakeDamage(currentTime)) return;
-
-    const damage = boss.isRushing ? 35 : 25;
-
-    App.playerHealth = Math.max(0, App.playerHealth - damage);
-    App.lastHitTime = currentTime;
-    App.world.shakeTime = 0.22;
-    App.player.takeHit();
-    safePlay(App.audio.hurt);
-
-    App.player.vx = boss.x < App.player.x ? 180 : -180;
-    App.player.vy = -180;
-
-    if (App.playerHealth <= 0) {
-      loseGame();
-    }
-  }
-
-  /**
-   * Coin einsammeln.
-   */
-  function checkCoinCollection() {
-    App.coins.forEach((coin) => {
-      if (coin.collected) return;
-      if (!isColliding(App.player, coin)) return;
-
-      coin.collected = true;
-      App.coinCount += 1;
-      safePlay(App.audio.coin);
-    });
-
-    App.coins = App.coins.filter((coin) => !coin.collected);
-  }
-
-  /**
-   * Bottle einsammeln.
-   */
-  function checkBottleCollection() {
-    App.groundBottles.forEach((bottle) => {
-      if (bottle.collected) return;
-      if (!isColliding(App.player, bottle)) return;
-      if (App.bottleCount >= App.maxBottles) return;
-
-      bottle.collected = true;
-      App.bottleCount += 1;
-      safePlay(App.audio.bottleCollect);
-    });
-
-    App.groundBottles = App.groundBottles.filter((bottle) => !bottle.collected);
-  }
-
-  /**
-   * Rendert alles.
+   * Renders the entire game scene.
    */
   function render() {
     if (!App.ctx) return;
@@ -912,24 +582,19 @@
 
     ctx.restore();
 
-    drawHUD(ctx);
-    ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
-    ctx.restore();
-
-    drawHUD(ctx);
-    drawBossAreaText(ctx);
-    drawBossPhaseText(ctx);
-    drawDamageOverlay(ctx);
+    drawHUD(ctx, App);
+    drawBossAreaText(ctx, App);
+    drawBossPhaseText(ctx, App);
+    drawDamageOverlay(ctx, App, nowMs);
 
     if (App.paused) {
-      drawPauseOverlay(ctx);
+      drawPauseOverlay(ctx, App);
     }
   }
 
   /**
-   * Zeichnet Hintergrund.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws the background layers.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawBackground(ctx) {
     if (!ASSETS.sky && !ASSETS.layer3 && !ASSETS.layer2 && !ASSETS.layer1) {
@@ -945,8 +610,8 @@
   }
 
   /**
-   * Zeichnet Wolken.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws all clouds.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawClouds(ctx) {
     App.clouds.forEach((cloud) => {
@@ -955,10 +620,10 @@
   }
 
   /**
-   * Zeichnet Parallax-Layer.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   * @param {HTMLImageElement|null} img - Bild
-   * @param {number} speedFactor - Geschwindigkeitsfaktor
+   * Draws a parallax background layer.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {HTMLImageElement|null} img - Image to draw
+   * @param {number} speedFactor - Parallax speed factor
    */
   function drawParallaxLayer(ctx, img, speedFactor) {
     if (!img || !img.complete || img.naturalWidth === 0) {
@@ -967,16 +632,16 @@
 
     const imgW = App.world.w;
     const imgH = App.world.h;
-    const offset = -(App.world.camX * speedFactor) % imgW;
+    const offset = Math.floor(-(App.world.camX * speedFactor) % imgW);
 
-    ctx.drawImage(img, offset, 0, imgW, imgH);
-    ctx.drawImage(img, offset + imgW, 0, imgW, imgH);
-    ctx.drawImage(img, offset - imgW, 0, imgW, imgH);
+    ctx.drawImage(img, offset, 0, imgW + 1, imgH);
+    ctx.drawImage(img, offset + imgW, 0, imgW + 1, imgH);
+    ctx.drawImage(img, offset - imgW, 0, imgW + 1, imgH);
   }
 
   /**
-   * Zeichnet Boden.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws the ground layer.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawGround(ctx) {
     const groundY = App.world.groundY;
@@ -995,8 +660,8 @@
   }
 
   /**
-   * Zeichnet Coins.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws all coins that are not collected.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawCoins(ctx) {
     App.coins.forEach((coin) => {
@@ -1007,8 +672,8 @@
   }
 
   /**
-   * Zeichnet Schatten unter Figuren und Objekten.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws shadows under all entities and objects.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawShadows(ctx) {
     drawEntityShadow(ctx, App.player, 0.32);
@@ -1037,10 +702,10 @@
   }
 
   /**
-   * Zeichnet Schatten für ein Objekt.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   * @param {object} obj - Objekt
-   * @param {number} scale - Schattenbreite
+   * Draws a shadow for a single object.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {object} obj - Object to draw shadow for
+   * @param {number} scale - Shadow width scale
    */
   function drawEntityShadow(ctx, obj, scale) {
     if (!obj) return;
@@ -1070,8 +735,8 @@
   }
 
   /**
-   * Zeichnet Bodenflaschen.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws all ground bottles that are not collected.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawGroundBottles(ctx) {
     App.groundBottles.forEach((bottle) => {
@@ -1082,16 +747,16 @@
   }
 
   /**
-   * Zeichnet Spieler.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws the player character.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawPlayer(ctx) {
     App.player.draw(ctx, ASSETS);
   }
 
   /**
-   * Zeichnet Gegner.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws all enemies that are not dead.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawEnemies(ctx) {
     App.enemies.forEach((enemy) => {
@@ -1102,8 +767,8 @@
   }
 
   /**
-   * Zeichnet Endboss.
-   * @param {CanvasRenderingContext2D} ctx - Context
+   * Draws the endboss if alive.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawEndboss(ctx) {
     const boss = App.endboss;
@@ -1113,190 +778,8 @@
   }
 
   /**
-   * Zeichnet HUD mit Icons.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   */
-  function drawHUD(ctx) {
-    drawHealthHUD(ctx);
-    drawCoinHUD(ctx);
-    drawBottleHUD(ctx);
-  }
-
-  function drawHealthHUD(ctx) {
-    const x = 20;
-    const y = 20;
-
-    // Icon
-    ctx.fillStyle = "#e74c3c";
-    ctx.fillRect(x, y, 28, 20);
-
-    // Bar Hintergrund
-    ctx.fillStyle = "rgba(0,0,0,0.4)";
-    ctx.fillRect(x + 40, y, 160, 20);
-
-    // Bar Inhalt
-    const ratio = App.playerHealth / App.maxHealth;
-    ctx.fillStyle = "#e74c3c";
-    ctx.fillRect(x + 40, y, 160 * ratio, 20);
-
-    ctx.strokeStyle = "#fff";
-    ctx.strokeRect(x + 40, y, 160, 20);
-  }
-
-  function drawCoinHUD(ctx) {
-    const x = 20;
-    const y = 55;
-
-    // Coin Kreis
-    ctx.fillStyle = "#f1c40f";
-    ctx.beginPath();
-    ctx.arc(x + 10, y + 10, 10, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "18px Arial";
-    ctx.fillText(`x ${App.coinCount}`, x + 30, y + 16);
-  }
-
-  function drawBottleHUD(ctx) {
-    const x = 20;
-    const y = 90;
-
-    // Bottle Icon
-    ctx.fillStyle = "#27ae60";
-    ctx.fillRect(x, y, 12, 18);
-
-    ctx.fillStyle = "#d35400";
-    ctx.fillRect(x + 3, y - 6, 6, 6);
-    ctx.fillStyle = "#fff";
-    ctx.font = "18px Arial";
-    ctx.fillText(`x ${App.bottleCount}`, x + 20, y + 16);
-  }
-
-  /**
-   * Zeichnet Healthbar.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   */
-  function drawHealthBar(ctx) {
-    const x = 20;
-    const y = 20;
-    const w = 200;
-    const h = 18;
-    const ratio = App.playerHealth / App.maxHealth;
-    const percent = Math.round(ratio * 100);
-
-    ctx.fillStyle = "rgba(0,0,0,0.4)";
-    ctx.fillRect(x, y, w, h);
-
-    ctx.fillStyle = "#e74c3c";
-    ctx.fillRect(x, y, w * ratio, h);
-
-    ctx.strokeStyle = "#ffffff";
-    ctx.strokeRect(x, y, w, h);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "14px Arial";
-    ctx.fillText(`${percent}%`, x + w + 10, y + 14);
-  }
-
-  /**
-   * Zeichnet Coinbar.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   */
-  function drawCoinBar(ctx) {
-    const x = 20;
-    const y = 60;
-    ctx.fillStyle = "#f1c40f";
-    ctx.beginPath();
-    ctx.arc(x + 10, y - 10, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#d4ac0d";
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 16px Arial";
-    ctx.fillText(`x ${App.coinCount}`, x + 25, y - 5);
-  }
-
-  /**
-   * Zeichnet Bottlebar.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   */
-  function drawBottleBar(ctx) {
-    const x = 20;
-    const y = 95;
-    ctx.fillStyle = "#27ae60";
-    ctx.fillRect(x, y - 18, 12, 18);
-
-    ctx.fillStyle = "#d35400";
-    ctx.fillRect(x + 3, y - 24, 6, 6);
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 16px Arial";
-    ctx.fillText(`x ${App.bottleCount}`, x + 20, y - 5);
-  }
-
-  /**
-   * Zeichnet Boss-Area Text.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   */
-  function drawBossAreaText(ctx) {
-    if (!App.bossActive || App.gameWon || !App.bossAreaShown) return;
-
-    ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.fillRect(App.world.w / 2 - 110, 55, 220, 32);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "18px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("BOSS AREA", App.world.w / 2, 77);
-    ctx.restore();
-  }
-
-  /**
-   * Zeichnet Boss-Phase-2 Text.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   */
-  function drawBossPhaseText(ctx) {
-    if (App.bossPhaseTextTime <= 0) return;
-
-    ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.fillRect(App.world.w / 2 - 150, 100, 300, 40);
-
-    ctx.fillStyle = "#ff7675";
-    ctx.font = "bold 22px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("BOSS PHASE 2!", App.world.w / 2, 128);
-    ctx.restore();
-  }
-
-  /**
-   * Zeichnet Damage-Overlay.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   */
-  function drawDamageOverlay(ctx) {
-    const sinceHit = nowMs() - App.lastHitTime;
-    if (sinceHit > 120) return;
-
-    ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-    ctx.fillRect(0, 0, App.world.w, App.world.h);
-  }
-
-  /**
-   * Zeichnet Pause Overlay.
-   * @param {CanvasRenderingContext2D} ctx - Context
-   */
-  function drawPauseOverlay(ctx) {
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.fillRect(0, 0, App.world.w, App.world.h);
-    ctx.fillStyle = "#fff";
-    ctx.font = "22px system-ui, sans-serif";
-    ctx.fillText("PAUSED", App.world.w / 2 - 45, App.world.h / 2);
-  }
-
-  /**
-   * Setzt Endscreen Statistik.
-   * @param {string} screenId - Screen ID
+   * Sets the end screen statistics.
+   * @param {string} screenId - Screen element ID
    */
   function setEndStats(screenId) {
     const screen = $(screenId);
@@ -1319,7 +802,7 @@
   }
 
   /**
-   * Bindet Keyboard.
+   * Binds keyboard event listeners for game controls.
    */
   function bindKeyboard() {
     window.addEventListener("keydown", onKeyDown, { capture: true });
@@ -1328,8 +811,8 @@
   }
 
   /**
-   * Keydown.
-   * @param {KeyboardEvent} e - Event
+   * Handles keydown events for game controls.
+   * @param {KeyboardEvent} e - Keyboard event
    */
   function onKeyDown(e) {
     const c = e.code;
@@ -1347,8 +830,8 @@
   }
 
   /**
-   * Keyup.
-   * @param {KeyboardEvent} e - Event
+   * Handles keyup events for game controls.
+   * @param {KeyboardEvent} e - Keyboard event
    */
   function onKeyUp(e) {
     const c = e.code;
@@ -1361,7 +844,7 @@
   }
 
   /**
-   * Resetet Input.
+   * Resets all input states to false.
    */
   function resetInput() {
     App.input.left = false;
@@ -1371,7 +854,7 @@
   }
 
   /**
-   * Bindet Mobile Buttons.
+   * Binds mobile button event listeners for touch controls.
    */
   function bindMobile() {
     const buttons = document.querySelectorAll(".mobile-control-btn");
@@ -1405,9 +888,9 @@
   }
 
   /**
-   * Setzt Mobile Input.
+   * Sets mobile input state based on button ID.
    * @param {string} id - Button ID
-   * @param {boolean} down - Status
+   * @param {boolean} down - Pressed state
    */
   function setMobileInput(id, down) {
     if (id === "mobile-left") App.input.left = down;
@@ -1417,47 +900,47 @@
   }
 
   /**
-   * Pausiert oder setzt fort.
+   * Toggles pause state for the game.
    */
   function pauseGame() {
     if (!App.running) return;
 
     App.paused = !App.paused;
-    getScreenApi().setPauseIcon(App.paused);
+    window.Screen.setPauseIcon(App.paused);
 
     if (App.paused) {
-      stopBackgroundMusic();
+      stopBackgroundMusic(App);
     } else {
-      startBackgroundMusic();
+      startBackgroundMusic(App);
     }
   }
 
   /**
-   * Zeigt Confirm Screen.
+   * Shows the quit confirmation dialog and pauses the game.
    */
   function quitGame() {
     if (!App.running) return;
 
     App.paused = true;
-    getScreenApi().setPauseIcon(true);
-    getScreenApi().showById("confirm-dialog");
-    getScreenApi().overlay(true);
-    stopBackgroundMusic();
+    window.Screen.setPauseIcon(true);
+    window.Screen.showById("confirm-dialog");
+    window.Screen.overlay(true);
+    stopBackgroundMusic(App);
   }
 
   /**
-   * Setzt fort.
+   * Resumes the game from pause or confirmation dialog.
    */
   function resumeGame() {
     $("confirm-dialog")?.classList.add("d-none");
-    getScreenApi().overlay(false);
     App.paused = false;
-    getScreenApi().setPauseIcon(false);
-    startBackgroundMusic();
+    window.Screen.overlay(false);
+    window.Screen.setPauseIcon(false);
+    startBackgroundMusic(App);
   }
 
   /**
-   * Zurück zum Startscreen.
+   * Returns to the start screen and resets the game state.
    */
   function goBackToHome() {
     App.running = false;
@@ -1466,61 +949,44 @@
       cancelAnimationFrame(App.rafId);
     }
 
-    stopBackgroundMusic();
-    getScreenApi().overlay(false);
-    getScreenApi().setPauseIcon(false);
-    getScreenApi().showById("screen-start");
+    stopBackgroundMusic(App);
+    window.Screen.overlay(false);
+    window.Screen.setPauseIcon(false);
+    window.Screen.showById("screen-start");
     resetGameState();
   }
 
   /**
-   * Restart.
+   * Restarts the game.
    */
   function playAgain() {
     startGame();
   }
 
   /**
-   * Sound an/aus.
+   * Handles game over state and displays the lose screen.
    */
-  function enableSound() {
-    App.soundOn = !App.soundOn;
-    localStorage.setItem("soundOn", String(App.soundOn));
-
-    applyMuteState();
-    getScreenApi().setSoundIcons(App.soundOn);
-
-    if (App.soundOn) {
-      startBackgroundMusic();
-    } else {
-      stopBackgroundMusic();
-    }
-  }
-
-  /**
-   * Game Over.
-   */
-  function loseGame() {
+  window.loseGame = function () {
     App.running = false;
 
     if (App.rafId) {
       cancelAnimationFrame(App.rafId);
     }
 
-    stopBackgroundMusic();
+    stopBackgroundMusic(App);
     setEndStats("screen-end-lose");
-    getScreenApi().showById("screen-end-lose");
-    getScreenApi().overlay(true);
+    window.Screen.showById("screen-end-lose");
+    window.Screen.overlay(true);
 
     document
       .querySelectorAll("#screen-end-lose button")
       .forEach((btn) => btn.classList.remove("d-none"));
-  }
+  };
 
   /**
-   * Game Won.
+   * Handles game won state and displays the win screen.
    */
-  function winGame() {
+  window.winGame = function () {
     App.running = false;
     App.gameWon = true;
 
@@ -1528,18 +994,18 @@
       cancelAnimationFrame(App.rafId);
     }
 
-    stopBackgroundMusic();
+    stopBackgroundMusic(App);
     setEndStats("screen-end-win");
-    getScreenApi().showById("screen-end-win");
-    getScreenApi().overlay(true);
+    window.Screen.showById("screen-end-win");
+    window.Screen.overlay(true);
 
     document
       .querySelectorAll("#screen-end-win button")
       .forEach((btn) => btn.classList.remove("d-none"));
-  }
+  };
 
   /**
-   * Fullscreen.
+   * Toggles fullscreen mode for the game.
    */
   function toggleFullScreen() {
     const elem = $("fullscreen") || document.body;
@@ -1549,26 +1015,16 @@
     } else {
       elem.requestFullscreen?.();
     }
-
-    setTimeout(resizeCanvasToWindow, 300);
   }
 
   /**
-   * Prüft Damage Cooldown.
-   * @param {number} currentTime - Zeit
-   * @returns {boolean}
+   * Checks if the player can take damage (invulnerability cooldown).
+   * @param {number} currentTime - Current time in ms
+   * @returns {boolean} True if player can take damage
    */
-  function canTakeDamage(currentTime) {
+  window.canTakeDamage = function (currentTime) {
     return currentTime - App.lastHitTime > App.invulnerableMs;
-  }
-
-  /**
-   * Aktuelle Zeit.
-   * @returns {number}
-   */
-  function nowMs() {
-    return performance.now();
-  }
+  };
 
   window.init = init;
   window.startLoading = startLoading;

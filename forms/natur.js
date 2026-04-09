@@ -1,12 +1,12 @@
 "use strict";
 
 /**
- * Spielfigur.
+ * Player character.
  */
 class Natur {
   /**
-   * @param {number} x - Startposition X
-   * @param {number} y - Startposition Y
+   * @param {number} x - Start position X
+   * @param {number} y - Start position Y
    */
   constructor(x, y) {
     this.x = x;
@@ -62,7 +62,7 @@ class Natur {
   }
 
   /**
-   * Lädt Bilder.
+   * Loads images.
    */
   loadImages() {
     const walkPaths = [
@@ -92,7 +92,11 @@ class Natur {
       "img/2_character_pepe/4_hurt/H-43.png",
     ];
 
-    const throwPaths = [];
+    const throwPaths = [
+      "img/2_character_pepe/2_walk/W-21.png",
+      "img/2_character_pepe/2_walk/W-22.png",
+      "img/2_character_pepe/2_walk/W-23.png",
+    ];
 
     walkPaths.forEach((src) => {
       const img = new Image();
@@ -126,8 +130,8 @@ class Natur {
   }
 
   /**
-   * Setzt die Spielfigur zurück.
-   * @param {number} groundY - Bodenhöhe
+   * Resets the player character.
+   * @param {number} groundY - Ground height
    */
   reset(groundY) {
     this.x = 60;
@@ -160,9 +164,9 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Start-Intro.
-   * @param {number} dtSec - Delta in Sekunden
-   * @param {object} world - Welt
+   * Updates the intro drop sequence.
+   * @param {number} dtSec - Delta time in seconds
+   * @param {object} world - World object
    */
   updateIntro(dtSec, world) {
     if (!this.isIntroDropping) {
@@ -188,7 +192,7 @@ class Natur {
   }
 
   /**
-   * Spieler bekommt Schaden.
+   * Player takes damage.
    */
   takeHit() {
     this.hurtTime = 0.35;
@@ -197,7 +201,7 @@ class Natur {
   }
 
   /**
-   * Spieler wirft Flasche.
+   * Player throws a bottle.
    */
   startThrow() {
     this.throwTime = 0.3;
@@ -206,12 +210,12 @@ class Natur {
   }
 
   /**
-   * Aktualisiert den Charakter.
-   * @param {number} dtMs - Delta in Millisekunden
-   * @param {number} dtSec - Delta in Sekunden
-   * @param {object} input - Geladene Inputs
-   * @param {object} world - Welt
-   * @param {object} assets - Geladene Assets
+   * Updates the player character.
+   * @param {number} dtMs - Delta in milliseconds
+   * @param {number} dtSec - Delta in seconds
+   * @param {object} input - Loaded inputs
+   * @param {object} world - World object
+   * @param {object} assets - Loaded assets
    */
   update(dtMs, dtSec, input, world, assets) {
     if (this.isIntroDropping) {
@@ -229,8 +233,8 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Hurt-Zustand.
-   * @param {number} dtSec - Delta in Sekunden
+   * Updates hurt state.
+   * @param {number} dtSec - Delta in seconds
    */
   updateHurt(dtSec) {
     if (this.hurtTime > 0) {
@@ -243,8 +247,8 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Throw-Zustand.
-   * @param {number} dtSec - Delta in Sekunden
+   * Updates throw state.
+   * @param {number} dtSec - Delta in seconds
    */
   updateThrow(dtSec) {
     if (this.throwTime > 0) {
@@ -257,9 +261,9 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Idle und Sleep.
-   * @param {number} dtSec - Delta in Sekunden
-   * @param {object} input - Eingaben
+   * Updates idle and sleep state.
+   * @param {number} dtSec - Delta in seconds
+   * @param {object} input - Input
    */
   updateIdleState(dtSec, input) {
     const moving =
@@ -285,10 +289,10 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Bewegung.
-   * @param {number} dtSec - Delta in Sekunden
-   * @param {object} input - Eingaben
-   * @param {object} world - Welt
+   * Updates movement.
+   * @param {number} dtSec - Delta in seconds
+   * @param {object} input - Input
+   * @param {object} world - World object
    */
   updateMovement(dtSec, input, world) {
     const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
@@ -307,9 +311,9 @@ class Natur {
   }
 
   /**
-   * Verarbeitet Sprung.
-   * @param {object} input - Eingaben
-   * @param {number} floorY - Bodenhöhe
+   * Handles jump.
+   * @param {object} input - Input
+   * @param {number} floorY - Floor height
    */
   handleJump(input, floorY) {
     const grounded = this.y >= floorY - 0.5;
@@ -332,9 +336,9 @@ class Natur {
   }
 
   /**
-   * Wendet Gravitation an.
-   * @param {number} dtSec - Delta in Sekunden
-   * @param {number} floorY - Bodenhöhe
+   * Applies gravity.
+   * @param {number} dtSec - Delta in seconds
+   * @param {number} floorY - Floor height
    */
   applyGravity(dtSec, floorY) {
     this.vy += this.gravity * dtSec;
@@ -350,9 +354,9 @@ class Natur {
   }
 
   /**
-   * Hält Figur im Level.
-   * @param {object} world - Welt
-   * @param {number} floorY - Bodenhöhe
+   * Clamps the character inside the level.
+   * @param {object} world - World object
+   * @param {number} floorY - Floor height
    */
   clampInsideWorld(world, floorY) {
     this.x = Math.max(0, Math.min(world.levelW - this.w, this.x));
@@ -360,8 +364,8 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Animation.
-   * @param {number} dtMs - Delta in Millisekunden
+   * Updates animation.
+   * @param {number} dtMs - Delta in milliseconds
    * @param {object} assets - Assets
    */
   updateAnimation(dtMs, assets) {
@@ -372,8 +376,8 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Walk Animation.
-   * @param {number} dtMs - Delta in Millisekunden
+   * Updates walk animation.
+   * @param {number} dtMs - Delta in milliseconds
    * @param {object} assets - Assets
    */
   updateWalkAnimation(dtMs, assets) {
@@ -401,8 +405,8 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Jump Animation.
-   * @param {number} dtMs - Delta in Millisekunden
+   * Updates jump animation.
+   * @param {number} dtMs - Delta in milliseconds
    */
   updateJumpAnimation(dtMs) {
     if (this.onGround || this.throwTime > 0 || this.images.jump.length === 0) {
@@ -422,8 +426,8 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Hurt Animation.
-   * @param {number} dtMs - Delta in Millisekunden
+   * Updates hurt animation.
+   * @param {number} dtMs - Delta in milliseconds
    */
   updateHurtAnimation(dtMs) {
     if (this.hurtTime <= 0 || this.images.hurt.length === 0) {
@@ -443,8 +447,8 @@ class Natur {
   }
 
   /**
-   * Aktualisiert Throw Animation.
-   * @param {number} dtMs - Delta in Millisekunden
+   * Updates throw animation.
+   * @param {number} dtMs - Delta in milliseconds
    */
   updateThrowAnimation(dtMs) {
     if (this.throwTime <= 0 || this.images.throw.length === 0) {
@@ -465,8 +469,8 @@ class Natur {
   }
 
   /**
-   * Zeichnet den Charakter.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws the character.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {object} assets - Assets
    */
   draw(ctx, assets) {
@@ -495,6 +499,14 @@ class Natur {
       this.images.throw[this.anim.throwFrame].naturalWidth > 0
     ) {
       return this.images.throw[this.anim.throwFrame];
+    }
+
+    if (
+      this.hurtTime > 0 &&
+      this.images.hurt.length > 0 &&
+      this.images.hurt[this.anim.hurtFrame]
+    ) {
+      return this.images.hurt[this.anim.hurtFrame];
     }
 
     if (this.throwTime > 0 && this.images.throw.length > 0) {
@@ -540,9 +552,9 @@ class Natur {
   }
 
   /**
-   * Zeichnet Sprite.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
-   * @param {HTMLImageElement} img - Bild
+   * Draws the sprite.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {HTMLImageElement} img - Image
    */
   drawSprite(ctx, img) {
     if (!img || !img.complete || img.naturalWidth === 0) {
@@ -563,8 +575,8 @@ class Natur {
   }
 
   /**
-   * Zeichnet Fallback Rechteck.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws fallback rectangle.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   drawFallback(ctx) {
     ctx.fillStyle = "red";
@@ -572,8 +584,8 @@ class Natur {
   }
 
   /**
-   * Zeichnet Sleep Text.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws sleep text.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   drawSleepText(ctx) {
     if (!this.sleepMode) {
