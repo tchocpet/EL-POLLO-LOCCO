@@ -16,12 +16,9 @@
    */
   const ASSETS = {
     sky: null,
-    layer3: null,
-    layer2: null,
-    layer1: null,
     playerWalk: [],
     playerIdle: null,
-    walkSoundCooldown: 0,
+    fullBackground: null,
   };
 
   /**
@@ -29,10 +26,7 @@
    */
   const PATHS = {
     bg: {
-      sky: "img/5_background/layers/air.png",
-      layer3: "img/5_background/layers/3_third_layer/1.png",
-      layer2: "img/5_background/layers/2_second_layer/1.png",
-      layer1: "img/5_background/layers/1_first_layer/1.png",
+      full: "img/5_background/complete_background.png",
     },
     idle: "img/2_character_pepe/1_idle/idle/I-1.png",
     walk: [
@@ -63,6 +57,7 @@
     eventsBound: false,
     rafId: null,
     lastTime: 0,
+    walkSoundCooldown: 0,
 
     soundOn: localStorage.getItem("soundOn") === "true",
 
@@ -137,6 +132,7 @@
 
     App.ctx = App.canvas.getContext("2d");
     if (!App.ctx) return false;
+    App.ctx.imageSmoothingEnabled = false;
 
     App.canvas.width = App.world.w;
     App.canvas.height = App.world.h;
@@ -218,51 +214,21 @@
    * Loads all required assets (images, audio) for the game.
    */
   async function ensureAssets() {
-    if (!ASSETS.sky) {
+    if (!ASSETS.fullBackground) {
       try {
-        ASSETS.sky = await loadImage(PATHS.bg.sky);
-      } catch (_) {
-        ASSETS.sky = null;
-      }
-    }
-
-    if (!ASSETS.layer3) {
-      try {
-        ASSETS.layer3 = await loadImage(PATHS.bg.layer3);
-      } catch (_) {
-        ASSETS.layer3 = null;
-      }
-    }
-
-    if (!ASSETS.layer2) {
-      try {
-        ASSETS.layer2 = await loadImage(PATHS.bg.layer2);
-      } catch (_) {
-        ASSETS.layer2 = null;
-      }
-    }
-
-    if (!ASSETS.layer1) {
-      try {
-        ASSETS.layer1 = await loadImage(PATHS.bg.layer1);
-      } catch (_) {
-        ASSETS.layer1 = null;
+        ASSETS.fullBackground = await loadImage(PATHS.bg.full);
+      } catch (error) {
+        console.error("Failed to load background:", error);
       }
     }
 
     if (!ASSETS.playerIdle) {
-      try {
-        ASSETS.playerIdle = await loadImage(PATHS.idle);
-      } catch (_) {
-        ASSETS.playerIdle = null;
-      }
+      ASSETS.playerIdle = await loadImage(PATHS.idle);
     }
 
     if (ASSETS.playerWalk.length === 0) {
       for (const src of PATHS.walk) {
-        try {
-          ASSETS.playerWalk.push(await loadImage(src));
-        } catch (_) {}
+        ASSETS.playerWalk.push(await loadImage(src));
       }
     }
 
@@ -361,18 +327,22 @@
    * @param {number} dtSec - Delta time in seconds
    */
   function update(dtMs, dtSec) {
+    updatePlayerAndCamera(dtMs, dtSec);
+    if (App.player.isIntroDropping) return;
+    updateWorld(dtMs, dtSec);
+    updateCollisionsAndCollections();
+  }
+
+  function updatePlayerAndCamera(dtMs, dtSec) {
     const introInput =
       App.player && App.player.isIntroDropping
         ? { left: false, right: false, jump: false, fire: false }
         : App.input;
-
     App.player.update(dtMs, dtSec, introInput, App.world, ASSETS);
     updateCamera(App.world, App.player);
+  }
 
-    if (App.player.isIntroDropping) {
-      return;
-    }
-
+  function updateWorld(dtMs, dtSec) {
     updateClouds(dtSec);
     updateScreenShake(dtSec);
     updateBottleThrow(dtSec);
@@ -382,6 +352,9 @@
     updateCoins(dtMs);
     updateGroundBottles(dtMs);
     updateWalkSound(dtSec);
+  }
+
+  function updateCollisionsAndCollections() {
     handleBottleEnemyHits(App);
     handleBottleBossHits(App);
     checkPlayerEnemyHits(App, nowMs());
@@ -447,6 +420,25 @@
     safePlay(App.audio.walk);
     App.walkSoundCooldown = 0.25;
   }
+
+  /**
+   * Applies damage to the player and checks for game over.
+   * @param {number} amount - Damage amount.
+   */
+  function applyDamage(amount) {
+    if (!window.canTakeDamage(nowMs())) return;
+
+    App.playerHealth -= amount;
+    App.playerHealth = Math.max(0, App.playerHealth);
+    App.lastHitTime = nowMs();
+
+    safePlay(App.audio.hurt);
+    if (App.playerHealth <= 0) {
+      App.playerHealth = 0;
+      window.loseGame();
+    }
+  }
+  window.applyDamage = applyDamage;
 
   /**
    * Creates and throws a new bottle projectile.
@@ -563,6 +555,12 @@
     if (!App.ctx) return;
 
     const ctx = App.ctx;
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.msImageSmoothingEnabled = false;
+
     ctx.clearRect(0, 0, App.world.w, App.world.h);
 
     drawBackground(ctx);
@@ -597,18 +595,23 @@
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   function drawBackground(ctx) {
-    if (!ASSETS.sky && !ASSETS.layer3 && !ASSETS.layer2 && !ASSETS.layer1) {
+    const img = ASSETS.fullBackground;
+    if (!img || !img.complete) {
       ctx.fillStyle = "#87ceeb";
       ctx.fillRect(0, 0, App.world.w, App.world.h);
       return;
     }
 
-    drawParallaxLayer(ctx, ASSETS.sky, 0.15);
-    drawParallaxLayer(ctx, ASSETS.layer3, 0.35);
-    drawParallaxLayer(ctx, ASSETS.layer2, 0.55);
-    drawParallaxLayer(ctx, ASSETS.layer1, 0.8);
-  }
+    // Skalierung auf die Höhe des Canvas
+    const scale = App.world.h / img.height;
+    const width = img.width * scale;
 
+    // Parallax-Effekt (optional)
+    const offset = -(App.world.camX * 0.3) % width;
+
+    ctx.drawImage(img, offset, 0, width, App.world.h);
+    ctx.drawImage(img, offset + width, 0, width, App.world.h);
+  }
   /**
    * Draws all clouds.
    * @param {CanvasRenderingContext2D} ctx - Canvas context
@@ -625,20 +628,28 @@
    * @param {HTMLImageElement|null} img - Image to draw
    * @param {number} speedFactor - Parallax speed factor
    */
-  function drawParallaxLayer(ctx, img, speedFactor) {
+  function drawParallaxLayer(
+    ctx,
+    img,
+    speedFactor,
+    heightFactor = 1,
+    alignBottom = false,
+  ) {
     if (!img || !img.complete || img.naturalWidth === 0) {
       return;
     }
 
-    const imgW = App.world.w;
-    const imgH = App.world.h;
-    const offset = Math.floor(-(App.world.camX * speedFactor) % imgW);
+    const targetH = App.world.h * heightFactor;
+    const scale = targetH / img.naturalHeight;
+    const targetW = img.naturalWidth * scale;
 
-    ctx.drawImage(img, offset, 0, imgW + 1, imgH);
-    ctx.drawImage(img, offset + imgW, 0, imgW + 1, imgH);
-    ctx.drawImage(img, offset - imgW, 0, imgW + 1, imgH);
+    const drawY = alignBottom ? App.world.h - targetH : 0;
+    const offset = Math.floor(-(App.world.camX * speedFactor) % targetW);
+
+    ctx.drawImage(img, offset, drawY, targetW + 1, targetH);
+    ctx.drawImage(img, offset + targetW, drawY, targetW + 1, targetH);
+    ctx.drawImage(img, offset - targetW, drawY, targetW + 1, targetH);
   }
-
   /**
    * Draws the ground layer.
    * @param {CanvasRenderingContext2D} ctx - Canvas context
@@ -646,15 +657,12 @@
   function drawGround(ctx) {
     const groundY = App.world.groundY;
 
-    // Hauptboden
     ctx.fillStyle = "rgba(214, 170, 95, 0.55)";
     ctx.fillRect(0, groundY, App.world.levelW, App.world.h - groundY);
 
-    // dunklere obere Bodenkante
     ctx.fillStyle = "rgba(120, 82, 36, 0.35)";
     ctx.fillRect(0, groundY, App.world.levelW, 8);
 
-    // leichte Sandlinie
     ctx.fillStyle = "rgba(255, 226, 163, 0.22)";
     ctx.fillRect(0, groundY + 10, App.world.levelW, 4);
   }

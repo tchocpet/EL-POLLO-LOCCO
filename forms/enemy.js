@@ -146,32 +146,58 @@ class Enemy {
   }
 
   /**
-   * Zeichnet den Gegner.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws the enemy (main entry point).
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  /**
+   * Draws the enemy on the canvas.
+   * Splits logic into helpers for dead, alive, and fallback drawing.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   draw(ctx) {
     if (this.dead) {
       this.drawDead(ctx);
       return;
     }
-
     const img = this.walkImages[this.frame];
-
-    if (img && img.complete && img.naturalWidth > 0) {
-      ctx.save();
-
-      if (this.facing > 0) {
-        ctx.translate(this.x + this.w, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(img, 0, this.y, this.w, this.h);
-      } else {
-        ctx.drawImage(img, this.x, this.y, this.w, this.h);
-      }
-
-      ctx.restore();
+    if (this.isImageDrawable(img)) {
+      this.drawAliveImage(ctx, img);
       return;
     }
+    this.drawFallback(ctx);
+  }
 
+  /**
+   * Checks if an image is drawable.
+   * @param {HTMLImageElement} img - Image to check
+   * @returns {boolean} True if drawable
+   */
+  isImageDrawable(img) {
+    return img && img.complete && img.naturalWidth > 0;
+  }
+
+  /**
+   * Draws the alive enemy image, handling direction.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {HTMLImageElement} img - Image to draw
+   */
+  drawAliveImage(ctx, img) {
+    ctx.save();
+    if (this.facing > 0) {
+      ctx.translate(this.x + this.w, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, this.y, this.w, this.h);
+    } else {
+      ctx.drawImage(img, this.x, this.y, this.w, this.h);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draws a fallback rectangle if no image is available.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  drawFallback(ctx) {
     ctx.fillStyle = "#8b4513";
     ctx.fillRect(this.x, this.y, this.w, this.h);
   }

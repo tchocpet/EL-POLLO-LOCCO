@@ -1,12 +1,13 @@
 "use strict";
 
 /**
- * Endboss.
+ * Endboss (final boss enemy).
  */
 class Boss {
   /**
-   * @param {number} x - Startposition X
-   * @param {number} y - Startposition Y
+   * Creates a new Boss instance.
+   * @param {number} x - Start position X
+   * @param {number} y - Start position Y
    */
   constructor(x, y) {
     this.x = x;
@@ -47,7 +48,7 @@ class Boss {
   }
 
   /**
-   * Lädt Bilder.
+   * Loads all boss images (walk, hurt, dead).
    */
   loadImages() {
     const walkPaths = [
@@ -89,41 +90,87 @@ class Boss {
   }
 
   /**
-   * Aktualisiert den Boss.
-   * @param {number} dtMs - Delta in Millisekunden
-   * @param {number} dtSec - Delta in Sekunden
-   * @param {object} world - Welt
-   * @param {object} player - Spieler
-   * @param {number} health - Boss-Leben
+   * Updates the boss state.
+   * @param {number} dtMs - Delta in milliseconds
+   * @param {number} dtSec - Delta in seconds
+   * @param {object} world - World object
+   * @param {object} player - Player object
+   * @param {number} health - Boss health
+   */
+
+  /**
+   * Updates the boss state each frame.
+   * @param {number} dtMs - Delta in milliseconds
+   * @param {number} dtSec - Delta in seconds
+   * @param {object} world - World object
+   * @param {object} player - Player object
+   * @param {number} health - Boss health
    */
   update(dtMs, dtSec, world, player, health) {
+    if (this.isDeadState(dtMs, dtSec)) return;
+    this.updateAliveState(dtSec, health, player, world, dtMs);
+  }
+
+  /**
+   * Checks if boss is dead and updates dead state.
+   * @param {number} dtMs - Delta in milliseconds
+   * @param {number} dtSec - Delta in seconds
+   * @returns {boolean} True if boss is dead
+   */
+  isDeadState(dtMs, dtSec) {
     if (this.dead) {
       this.updateDead(dtMs, dtSec);
-      return;
+      return true;
     }
+    return false;
+  }
 
+  /**
+   * Updates boss state when alive.
+   * @param {number} dtSec - Delta in seconds
+   * @param {number} health - Boss health
+   * @param {object} player - Player object
+   * @param {object} world - World object
+   * @param {number} dtMs - Delta in milliseconds
+   */
+  updateAliveState(dtSec, health, player, world, dtMs) {
+    this.updateState(dtSec, health);
+    const distanceToPlayer = this.getDistanceToPlayer(player);
+    this.checkActivation(distanceToPlayer);
+    if (!this.active) return;
+    this.handleActiveState(distanceToPlayer, dtSec, world, player, dtMs);
+  }
+
+  /**
+   * Calculates the distance to the player.
+   * @param {object} player - Player object
+   * @returns {number} Distance to player
+   */
+  getDistanceToPlayer(player) {
+    return this.x - player.x;
+  }
+
+  updateState(dtSec, health) {
     this.updateHurt(dtSec);
     this.updatePhase(health);
     this.updateAttackTimers(dtSec);
+  }
 
-    const distanceToPlayer = this.x - player.x;
-
+  checkActivation(distanceToPlayer) {
     if (Math.abs(distanceToPlayer) < 750) {
       this.active = true;
     }
+  }
 
-    if (!this.active) {
-      return;
-    }
-
+  handleActiveState(distanceToPlayer, dtSec, world, player, dtMs) {
     this.tryStartRush(distanceToPlayer);
     this.move(dtSec, world, player);
     this.animate(dtMs);
   }
 
   /**
-   * Aktualisiert Hurt-Zeit.
-   * @param {number} dtSec - Delta in Sekunden
+   * Updates the hurt timer and state.
+   * @param {number} dtSec - Delta in seconds
    */
   updateHurt(dtSec) {
     if (this.hurtTime > 0) {
@@ -137,9 +184,9 @@ class Boss {
   }
 
   /**
-   * Aktualisiert Dead-Zustand.
-   * @param {number} dtMs - Delta in Millisekunden
-   * @param {number} dtSec - Delta in Sekunden
+   * Updates the dead state and removal timer.
+   * @param {number} dtMs - Delta in milliseconds
+   * @param {number} dtSec - Delta in seconds
    */
   updateDead(dtMs, dtSec) {
     this.deadTime += dtMs;
@@ -151,7 +198,7 @@ class Boss {
   }
 
   /**
-   * Boss bekommt Schaden.
+   * Boss takes damage.
    */
   takeHit() {
     if (this.dead) return;
@@ -227,39 +274,77 @@ class Boss {
    * @param {object} world - Welt
    * @param {object} player - Spieler
    */
+  /**
+   * Moves the boss according to its state and player position.
+   * @param {number} dtSec - Delta time in seconds
+   * @param {object} world - World object
+   * @param {object} player - Player object
+   */
+  /**
+   * Moves the boss towards the player and clamps position within world bounds.
+   * Splits logic into helpers for speed, proximity, direction, and clamping.
+   * @param {number} dtSec - Delta in seconds
+   * @param {object} world - World object
+   * @param {object} player - Player object
+   */
   move(dtSec, world, player) {
-    let speed = this.phaseTwo ? 155 : 100;
-
-    if (this.isRushing) {
-      speed = 255;
-    }
-
+    const speed = this.getMoveSpeed();
     const leftLimit = 0;
     const rightLimit = world.levelW - this.w;
-
     const distanceX = player.x - this.x;
-    const closeToPlayer = Math.abs(distanceX) < 20;
-
+    const closeToPlayer = this.isCloseToPlayer(distanceX);
     if (!closeToPlayer) {
-      this.vx = distanceX < 0 ? -speed : speed;
-      this.facing = this.vx < 0 ? -1 : 1;
-      this.x += this.vx * dtSec;
+      this.updateDirectionAndPosition(distanceX, speed, dtSec);
     } else {
       this.vx = 0;
     }
-
-    if (this.x < leftLimit) {
-      this.x = leftLimit;
-    }
-
-    if (this.x > rightLimit) {
-      this.x = rightLimit;
-    }
+    this.clampPosition(leftLimit, rightLimit);
   }
 
   /**
-   * Aktualisiert Boss-Animation.
-   * @param {number} dtMs - Delta in Millisekunden
+   * Returns the current move speed depending on boss state.
+   * @returns {number} Move speed
+   */
+  getMoveSpeed() {
+    if (this.isRushing) return 255;
+    if (this.phaseTwo) return 155;
+    return 100;
+  }
+
+  /**
+   * Checks if boss is close to the player.
+   * @param {number} distanceX - Distance to player
+   * @returns {boolean} True if close
+   */
+  isCloseToPlayer(distanceX) {
+    return Math.abs(distanceX) < 20;
+  }
+
+  /**
+   * Updates direction and position of the boss.
+   * @param {number} distanceX - Distance to player
+   * @param {number} speed - Move speed
+   * @param {number} dtSec - Delta time in seconds
+   */
+  updateDirectionAndPosition(distanceX, speed, dtSec) {
+    this.vx = distanceX < 0 ? -speed : speed;
+    this.facing = this.vx < 0 ? -1 : 1;
+    this.x += this.vx * dtSec;
+  }
+
+  /**
+   * Clamps boss position within world bounds.
+   * @param {number} leftLimit - Left boundary
+   * @param {number} rightLimit - Right boundary
+   */
+  clampPosition(leftLimit, rightLimit) {
+    if (this.x < leftLimit) this.x = leftLimit;
+    if (this.x > rightLimit) this.x = rightLimit;
+  }
+
+  /**
+   * Updates boss animation.
+   * @param {number} dtMs - Delta in milliseconds
    */
   animate(dtMs) {
     const limit = this.isRushing ? 90 : this.phaseTwo ? 120 : 180;

@@ -9,6 +9,16 @@ function loadImage(src) {
   });
 }
 
+async function loadImageSafe(src) {
+  try {
+    return await loadImage(src);
+  } catch (_) {
+    return null;
+  }
+}
+
+window.loadImageSafe = loadImageSafe;
+
 function createAudio(src) {
   const audio = new Audio(src);
   audio.preload = "auto";

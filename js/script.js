@@ -122,28 +122,37 @@
   function typeLine(line, onDone) {
     const textEl = $("story-p");
     if (!textEl) return;
+    prepareTyping(textEl);
+    typingTimer = setInterval(() => {
+      if (handleSkipRequested(line, textEl, onDone)) return;
+      typeNextChar(line, textEl, onDone);
+    }, 32);
+  }
 
+  function prepareTyping(textEl) {
     clearTyping();
     textEl.textContent = "";
     charIndex = 0;
+  }
 
-    typingTimer = setInterval(() => {
-      if (skipRequested) {
-        skipRequested = false;
-        clearTyping();
-        textEl.textContent = line;
-        setTimeout(onDone, 700);
-        return;
-      }
+  function handleSkipRequested(line, textEl, onDone) {
+    if (skipRequested) {
+      skipRequested = false;
+      clearTyping();
+      textEl.textContent = line;
+      setTimeout(onDone, 700);
+      return true;
+    }
+    return false;
+  }
 
-      textEl.textContent += line.charAt(charIndex);
-      charIndex++;
-
-      if (charIndex >= line.length) {
-        clearTyping();
-        setTimeout(onDone, 500);
-      }
-    }, 32);
+  function typeNextChar(line, textEl, onDone) {
+    textEl.textContent += line.charAt(charIndex);
+    charIndex++;
+    if (charIndex >= line.length) {
+      clearTyping();
+      setTimeout(onDone, 500);
+    }
   }
 
   /**

@@ -1,18 +1,49 @@
 "use strict";
 
+/**
+ * Handles collisions between thrown bottles and regular enemies.
+ * @param {object} App - Main game state object.
+ */
+
+/**
+ * Handles collisions between all bottles and all enemies.
+ * @param {object} App - Main game state object.
+ */
 function handleBottleEnemyHits(App) {
   App.projectiles.forEach((bottle) => {
-    App.enemies.forEach((enemy) => {
-      if (enemy.dead || bottle.dead || bottle.splashing) return;
-      if (!isColliding(bottle, enemy)) return;
-
-      enemy.die();
-      bottle.startSplash(enemy.y + enemy.h - bottle.h / 2);
-      App.killedEnemies += 1;
-    });
+    handleBottleHitsEnemies(App, bottle);
   });
 }
 
+/**
+ * Handles collisions for a single bottle with all enemies.
+ * @param {object} App - Main game state object.
+ * @param {object} bottle - The bottle projectile
+ */
+function handleBottleHitsEnemies(App, bottle) {
+  App.enemies.forEach((enemy) => {
+    handleBottleHitsEnemy(App, bottle, enemy);
+  });
+}
+
+/**
+ * Handles collision for a single bottle and a single enemy.
+ * @param {object} App - Main game state object.
+ * @param {object} bottle - The bottle projectile
+ * @param {object} enemy - The enemy
+ */
+function handleBottleHitsEnemy(App, bottle, enemy) {
+  if (enemy.dead || bottle.dead || bottle.splashing) return;
+  if (!isColliding(bottle, enemy)) return;
+  enemy.die();
+  bottle.startSplash(enemy.y + enemy.h - bottle.h / 2);
+  App.killedEnemies += 1;
+}
+
+/**
+ * Handles collisions between thrown bottles and the boss.
+ * @param {object} App - Main game state object.
+ */
 function handleBottleBossHits(App) {
   const boss = App.endboss;
   if (!boss || boss.dead) return;
@@ -36,35 +67,48 @@ function handleBottleBossHits(App) {
   }
 }
 
+/**
+ * Checks collisions between the player and regular enemies.
+ * @param {object} App - Main game state object.
+ * @param {number} currentTime - Current timestamp.
+ */
 function checkPlayerEnemyHits(App, currentTime) {
   App.enemies.forEach((enemy) => {
     if (enemy.dead) return;
     if (!isColliding(App.player, enemy)) return;
 
-    if (isStompHit(App.player, enemy)) {
+    const playerBottom = App.player.y + App.player.h;
+    const enemyTop = enemy.y;
+    const isFalling = App.player.vy > 0;
+    const stompOffset = 25;
+
+    const isStompHit =
+      isFalling && playerBottom - stompOffset < enemyTop + enemy.h * 0.5;
+
+    if (isStompHit) {
       enemy.die();
-      App.player.vy = -320;
       App.killedEnemies += 1;
+      App.player.vy = -320;
       return;
     }
 
     if (!canTakeDamage(currentTime)) return;
 
-    const damage = enemy.type === "big" ? 30 : 20;
-    App.playerHealth = Math.max(0, App.playerHealth - damage);
-    App.lastHitTime = currentTime;
-    App.world.shakeTime = 0.15;
+    const damage = enemy.damage || 20;
+
+    applyDamage(damage);
+    App.world.shakeTime = 0.2;
     App.player.takeHit();
-    safePlay(App.audio.hurt);
-
-    if (App.playerHealth <= 0) {
-      loseGame();
-    }
+    App.player.vx = enemy.x < App.player.x ? 150 : -150;
+    App.player.vy = -150;
   });
-
-  App.enemies = App.enemies.filter((enemy) => !enemy.dead);
 }
 
+/**
+ * Checks collisions between the player and the boss.
+ * @param {object} App - Main game state object.
+ * @param {number} currentTime - Current timestamp.
+ */
 function checkPlayerBossHit(App, currentTime) {
   const boss = App.endboss;
   if (!boss || boss.dead) return;
@@ -73,20 +117,17 @@ function checkPlayerBossHit(App, currentTime) {
 
   const damage = boss.isRushing ? 35 : 25;
 
-  App.playerHealth = Math.max(0, App.playerHealth - damage);
-  App.lastHitTime = currentTime;
+  applyDamage(damage);
   App.world.shakeTime = 0.22;
   App.player.takeHit();
-  safePlay(App.audio.hurt);
-
   App.player.vx = boss.x < App.player.x ? 180 : -180;
   App.player.vy = -180;
-
-  if (App.playerHealth <= 0) {
-    loseGame();
-  }
 }
 
+/**
+ * Checks whether the player collects coins.
+ * @param {object} App - Main game state object.
+ */
 function checkCoinCollection(App) {
   App.coins.forEach((coin) => {
     if (coin.collected) return;
@@ -100,6 +141,10 @@ function checkCoinCollection(App) {
   App.coins = App.coins.filter((coin) => !coin.collected);
 }
 
+/**
+ * Checks whether the player collects ground bottles.
+ * @param {object} App - Main game state object.
+ */
 function checkBottleCollection(App) {
   App.groundBottles.forEach((bottle) => {
     if (bottle.collected) return;

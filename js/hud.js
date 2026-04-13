@@ -81,8 +81,24 @@ coinHudImg.src = "img/8_coin/coin_1.png";
  * Draws the complete HUD.
  */
 function drawHUD(ctx, App) {
+  drawAllHUDComponents(ctx, App);
+}
+
+function drawAllHUDComponents(ctx, App) {
+  drawBottleHUDComponent(ctx, App);
+  drawHealthHUDComponent(ctx, App);
+  drawCoinHUDComponent(ctx, App);
+}
+
+function drawBottleHUDComponent(ctx, App) {
   drawBottleHUD(ctx, App);
+}
+
+function drawHealthHUDComponent(ctx, App) {
   drawHealthHUD(ctx, App);
+}
+
+function drawCoinHUDComponent(ctx, App) {
   drawCoinHUD(ctx, App);
 }
 
@@ -106,12 +122,12 @@ function drawHealthHUD(ctx, App) {
 }
 
 function getStatusBarImage(percent, images) {
-  const steps = [0, 20, 40, 60, 80, 100];
-  let closest = steps.reduce((prev, curr) =>
-    Math.abs(curr - percent) < Math.abs(prev - percent) ? curr : prev,
-  );
-
-  return images[closest];
+  if (percent >= 100) return images[100];
+  if (percent >= 80) return images[80];
+  if (percent >= 60) return images[60];
+  if (percent >= 40) return images[40];
+  if (percent >= 20) return images[20];
+  return images[0];
 }
 
 /**

@@ -473,16 +473,69 @@ class Natur {
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {object} assets - Assets
    */
+  /**
+   * Draws the player character (main entry point).
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {object} assets - Loaded assets
+   */
+  /**
+   * Draws the player character on the canvas.
+   * Splits logic into helpers for sprite, sleep text, and fallback drawing.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {object} assets - Asset collection
+   */
   draw(ctx, assets) {
     const img = this.getCurrentImage(assets);
-
     if (!img) {
       this.drawFallback(ctx);
       return;
     }
-
     this.drawSprite(ctx, img);
     this.drawSleepText(ctx);
+  }
+
+  /**
+   * Draws the player sprite image.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {HTMLImageElement} img - Image to draw
+   */
+  drawSprite(ctx, img) {
+    ctx.save();
+    if (this.facing < 0) {
+      ctx.translate(this.x + this.w, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, this.y, this.w, this.h);
+    } else {
+      ctx.drawImage(img, this.x, this.y, this.w, this.h);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draws sleep text above the player if in sleep mode.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  drawSleepText(ctx) {
+    if (!this.sleepMode) return;
+    ctx.save();
+    ctx.font = "32px Comic Sans MS, Comic Sans, cursive";
+    ctx.fillStyle = "#fff";
+    ctx.globalAlpha = 0.7;
+    ctx.fillText(
+      "Zzz...",
+      this.x + 40,
+      this.y - 18 - Math.sin(this.sleepWave) * 8,
+    );
+    ctx.restore();
+  }
+
+  /**
+   * Draws a fallback rectangle if no image is available.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  drawFallback(ctx) {
+    ctx.fillStyle = "#3498db";
+    ctx.fillRect(this.x, this.y, this.w, this.h);
   }
 
   /**
@@ -490,65 +543,145 @@ class Natur {
    * @param {object} assets - Assets
    * @returns {HTMLImageElement|null}
    */
+  /**
+   * Returns the current image for the player based on state.
+   * Splits logic into helpers for throw, hurt, jump, walk, sleep, idle, and fallback.
+   * @param {object} assets - Asset collection
+   * @returns {HTMLImageElement|null} The current image or null
+   */
   getCurrentImage(assets) {
-    if (
+    if (this.isThrowingImageAvailable()) return this.getThrowImage();
+    if (this.isHurtImageAvailable()) return this.getHurtImage();
+    if (this.isThrowing()) return this.getThrowImageOrNull();
+    if (this.isJumping()) return this.getJumpImageOrNull();
+    if (this.isWalking()) return this.getWalkImageOrNull(assets);
+    if (this.isSleeping()) return this.images.sleep;
+    if (this.isIdleImageAvailable()) return this.images.idle;
+    if (assets.playerIdle) return assets.playerIdle;
+    return null;
+  }
+
+  /**
+   * Checks if a valid throwing image is available.
+   * @returns {boolean}
+   */
+  isThrowingImageAvailable() {
+    const img = this.images.throw[this.anim.throwFrame];
+    return (
       this.throwTime > 0 &&
       this.images.throw.length > 0 &&
-      this.images.throw[this.anim.throwFrame] &&
-      this.images.throw[this.anim.throwFrame].complete &&
-      this.images.throw[this.anim.throwFrame].naturalWidth > 0
-    ) {
-      return this.images.throw[this.anim.throwFrame];
-    }
+      img &&
+      img.complete &&
+      img.naturalWidth > 0
+    );
+  }
 
-    if (
+  /**
+   * Returns the current throwing image.
+   * @returns {HTMLImageElement}
+   */
+  getThrowImage() {
+    return this.images.throw[this.anim.throwFrame];
+  }
+
+  /**
+   * Checks if a valid hurt image is available.
+   * @returns {boolean}
+   */
+  isHurtImageAvailable() {
+    return (
       this.hurtTime > 0 &&
       this.images.hurt.length > 0 &&
       this.images.hurt[this.anim.hurtFrame]
-    ) {
-      return this.images.hurt[this.anim.hurtFrame];
+    );
+  }
+
+  /**
+   * Returns the current hurt image.
+   * @returns {HTMLImageElement}
+   */
+  getHurtImage() {
+    return this.images.hurt[this.anim.hurtFrame];
+  }
+
+  /**
+   * Checks if the player is throwing.
+   * @returns {boolean}
+   */
+  isThrowing() {
+    return this.throwTime > 0 && this.images.throw.length > 0;
+  }
+
+  /**
+   * Returns the current throwing image or null.
+   * @returns {HTMLImageElement|null}
+   */
+  getThrowImageOrNull() {
+    return this.images.throw[this.anim.throwFrame] || null;
+  }
+
+  /**
+   * Checks if the player is jumping.
+   * @returns {boolean}
+   */
+  isJumping() {
+    return !this.onGround && this.images.jump.length > 0;
+  }
+
+  /**
+   * Returns the current jump image or null.
+   * @returns {HTMLImageElement|null}
+   */
+  getJumpImageOrNull() {
+    return this.images.jump[this.anim.jumpFrame] || null;
+  }
+
+  /**
+   * Checks if the player is walking.
+   * @returns {boolean}
+   */
+  isWalking() {
+    return Math.abs(this.vx) > 1 && this.onGround;
+  }
+
+  /**
+   * Returns the current walk image or null, checking fallback assets.
+   * @param {object} assets - Asset collection
+   * @returns {HTMLImageElement|null}
+   */
+  getWalkImageOrNull(assets) {
+    if (this.images.walk.length > 0) {
+      return this.images.walk[this.anim.walkFrame] || null;
     }
-
-    if (this.throwTime > 0 && this.images.throw.length > 0) {
-      return this.images.throw[this.anim.throwFrame] || null;
+    if (assets.playerWalk.length > 0) {
+      return assets.playerWalk[this.anim.walkFrame] || null;
     }
+    return null;
+  }
 
-    if (!this.onGround && this.images.jump.length > 0) {
-      return this.images.jump[this.anim.jumpFrame] || null;
-    }
-
-    if (Math.abs(this.vx) > 1 && this.onGround) {
-      if (this.images.walk.length > 0) {
-        return this.images.walk[this.anim.walkFrame] || null;
-      }
-
-      if (assets.playerWalk.length > 0) {
-        return assets.playerWalk[this.anim.walkFrame] || null;
-      }
-    }
-
-    if (
+  /**
+   * Checks if the player is sleeping and a sleep image is available.
+   * @returns {boolean}
+   */
+  isSleeping() {
+    return (
       this.sleepMode &&
       this.images.sleep &&
       this.images.sleep.complete &&
       this.images.sleep.naturalWidth > 0
-    ) {
-      return this.images.sleep;
-    }
+    );
+  }
 
-    if (
+  /**
+   * Checks if a valid idle image is available.
+   * @returns {boolean}
+   */
+  isIdleImageAvailable() {
+    return (
       this.images.idle &&
       this.images.idle.complete &&
       this.images.idle.naturalWidth > 0
-    ) {
-      return this.images.idle;
-    }
-
-    if (assets.playerIdle) {
-      return assets.playerIdle;
-    }
-
-    return null;
+    );
   }
 
   /**
@@ -593,13 +726,13 @@ class Natur {
     }
 
     const z1x = this.x + this.w * 0.78 + Math.sin(this.sleepWave) * 4;
-    const z1y = this.y - 18 + Math.sin(this.sleepFloat) * 6;
+    const z1y = this.y + this.h * 0.35 + Math.sin(this.sleepFloat) * 6;
 
     const z2x = this.x + this.w * 0.92 + Math.sin(this.sleepWave + 0.8) * 5;
-    const z2y = this.y - 46 + Math.sin(this.sleepFloat + 0.6) * 7;
+    const z2y = this.y + this.h * 0.25 + Math.sin(this.sleepFloat + 0.6) * 7;
 
     const z3x = this.x + this.w * 1.05 + Math.sin(this.sleepWave + 1.4) * 6;
-    const z3y = this.y - 78 + Math.sin(this.sleepFloat + 1.1) * 8;
+    const z3y = this.y + this.h * 0.15 + Math.sin(this.sleepFloat + 1.1) * 8;
 
     ctx.save();
     ctx.textAlign = "center";

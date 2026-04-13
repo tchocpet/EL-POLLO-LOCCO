@@ -121,22 +121,50 @@ class SmallEnemy {
   }
 
   /**
-   * Zeichnet den Gegner.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws the small enemy (main entry point).
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  /**
+   * Draws the small enemy on the canvas.
+   * Splits logic into helpers for dead, alive, and fallback drawing.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   draw(ctx) {
     if (this.dead) {
       this.drawDead(ctx);
       return;
     }
-
     const img = this.walkImages[this.frame];
-
-    if (img && img.complete) {
-      ctx.drawImage(img, this.x, this.y, this.w, this.h);
+    if (this.isImageDrawable(img)) {
+      this.drawAliveImage(ctx, img);
       return;
     }
+    this.drawFallback(ctx);
+  }
 
+  /**
+   * Checks if an image is drawable.
+   * @param {HTMLImageElement} img - Image to check
+   * @returns {boolean} True if drawable
+   */
+  isImageDrawable(img) {
+    return img && img.complete;
+  }
+
+  /**
+   * Draws the alive enemy image.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {HTMLImageElement} img - Image to draw
+   */
+  drawAliveImage(ctx, img) {
+    ctx.drawImage(img, this.x, this.y, this.w, this.h);
+  }
+
+  /**
+   * Draws a fallback rectangle if no image is available.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  drawFallback(ctx) {
     ctx.fillStyle = "#f39c12";
     ctx.fillRect(this.x, this.y, this.w, this.h);
   }

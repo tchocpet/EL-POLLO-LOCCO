@@ -57,17 +57,46 @@ class GroundBottle {
   }
 
   /**
-   * Zeichnet die Bodenflasche.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws the ground bottle (main entry point).
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  /**
+   * Draws the ground bottle on the canvas.
+   * Splits logic into helpers for image and fallback drawing.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   draw(ctx) {
     const img = this.images[this.frame];
-
-    if (img && img.complete && img.naturalWidth > 0) {
-      ctx.drawImage(img, this.x, this.y, this.w, this.h);
+    if (this.isImageDrawable(img)) {
+      this.drawBottleImage(ctx, img);
       return;
     }
+    this.drawFallback(ctx);
+  }
 
+  /**
+   * Checks if an image is drawable.
+   * @param {HTMLImageElement} img - Image to check
+   * @returns {boolean} True if drawable
+   */
+  isImageDrawable(img) {
+    return img && img.complete && img.naturalWidth > 0;
+  }
+
+  /**
+   * Draws the bottle image.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {HTMLImageElement} img - Image to draw
+   */
+  drawBottleImage(ctx, img) {
+    ctx.drawImage(img, this.x, this.y, this.w, this.h);
+  }
+
+  /**
+   * Draws a fallback rectangle if no image is available.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  drawFallback(ctx) {
     ctx.fillStyle = "#27ae60";
     ctx.fillRect(this.x, this.y, this.w, this.h);
   }

@@ -23,17 +23,47 @@ class Cloud {
    * @param {number} dtSec - Delta in Sekunden
    * @param {object} world - Welt
    */
+  /**
+   * Updates the cloud position and handles looping.
+   * @param {number} dtSec - Delta time in seconds
+   * @param {object} world - World object
+   */
+  /**
+   * Updates the cloud position and handles looping.
+   * Splits logic into helpers for movement and looping.
+   * @param {number} dtSec - Delta time in seconds
+   * @param {object} world - World object
+   */
   update(dtSec, world) {
-    this.x -= this.speed * dtSec;
+    this.moveCloud(dtSec);
+    this.handleCloudLoop(world);
+  }
 
+  /**
+   * Moves the cloud horizontally.
+   * @param {number} dtSec - Delta time in seconds
+   */
+  /**
+   * Moves the cloud horizontally based on speed and delta time.
+   * @param {number} dtSec - Delta time in seconds
+   */
+  moveCloud(dtSec) {
+    this.x -= this.speed * dtSec;
+  }
+
+  /**
+   * Loops the cloud to the right if it leaves the screen.
+   * @param {object} world - World object
+   */
+  handleCloudLoop(world) {
     if (this.x + this.w < 0) {
       this.x = world.levelW + Math.random() * 600;
     }
   }
 
   /**
-   * Zeichnet die Wolke.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws the cloud on the canvas.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   draw(ctx) {
     if (this.img.complete && this.img.naturalWidth > 0) {

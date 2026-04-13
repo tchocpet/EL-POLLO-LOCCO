@@ -1,13 +1,14 @@
 "use strict";
 
 /**
- * Wurf-Flasche.
+ * Thrown bottle projectile.
  */
 class Bottle {
   /**
-   * @param {number} x - Startposition X
-   * @param {number} y - Startposition Y
-   * @param {number} direction - Wurfrichtung
+   * Creates a new bottle.
+   * @param {number} x - Start position X.
+   * @param {number} y - Start position Y.
+   * @param {number} direction - Throw direction.
    */
   constructor(x, y, direction) {
     this.x = x;
@@ -33,7 +34,7 @@ class Bottle {
   }
 
   /**
-   * Lädt Bilder.
+   * Loads all bottle images.
    */
   loadImages() {
     const rotationPaths = [
@@ -66,44 +67,68 @@ class Bottle {
   }
 
   /**
-   * Aktualisiert die Flasche.
-   * @param {number} dtSec - Delta in Sekunden
-   * @param {object} world - Welt
+   * Updates the bottle state each frame.
+   * @param {number} dtSec - Delta time in seconds.
+   * @param {object} world - World object.
    */
   update(dtSec, world) {
-    if (this.dead) {
-      return;
-    }
+    if (this.dead) return;
 
     if (this.splashing) {
       this.updateSplash(dtSec);
       return;
     }
 
+    this.updatePhysics(dtSec);
+    this.updateRotationAnimation(dtSec);
+
+    if (this.checkGroundCollision(world)) {
+      return;
+    }
+
+    this.checkWorldBounds(world);
+  }
+
+  /**
+   * Updates bottle physics.
+   * @param {number} dtSec - Delta time in seconds.
+   */
+  updatePhysics(dtSec) {
     this.vy += this.gravity * dtSec;
     this.x += this.vx * dtSec;
     this.y += this.vy * dtSec;
+  }
 
+  /**
+   * Updates the bottle rotation animation.
+   * @param {number} dtSec - Delta time in seconds.
+   */
+  updateRotationAnimation(dtSec) {
     this.animT += dtSec;
 
     if (this.animT >= 0.08) {
       this.animT = 0;
       this.frame = (this.frame + 1) % this.rotationImages.length;
     }
-
-    if (this.y + this.h >= world.groundY) {
-      this.startSplash(world.groundY - this.h + 10);
-      return;
-    }
-
-    if (this.isOutsideWorld(world)) {
-      this.dead = true;
-    }
   }
 
   /**
-   * Startet Splash.
-   * @param {number} splashY - Bodenhöhe
+   * Checks if the bottle hits the ground.
+   * @param {object} world - World object.
+   * @returns {boolean} True if splash started.
+   */
+  checkGroundCollision(world) {
+    if (this.y + this.h >= world.groundY) {
+      this.startSplash(world.groundY - this.h + 10);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Starts the splash animation.
+   * @param {number} splashY - Splash Y position.
    */
   startSplash(splashY) {
     this.splashing = true;
@@ -116,8 +141,8 @@ class Bottle {
   }
 
   /**
-   * Aktualisiert Splash.
-   * @param {number} dtSec - Delta in Sekunden
+   * Updates the splash animation.
+   * @param {number} dtSec - Delta time in seconds.
    */
   updateSplash(dtSec) {
     this.splashTime += dtSec;
@@ -134,21 +159,26 @@ class Bottle {
   }
 
   /**
-   * Prüft, ob Flasche außerhalb der Welt ist.
-   * @param {object} world - Welt
-   * @returns {boolean}
+   * Checks whether the bottle leaves the world bounds.
+   * @param {object} world - World object.
    */
-  isOutsideWorld(world) {
-    return (
-      this.x < -100 || this.x > world.levelW + 100 || this.y > world.h + 220
-    );
+  checkWorldBounds(world) {
+    if (
+      this.x < -100 ||
+      this.x > world.levelW + 100 ||
+      this.y > world.h + 220
+    ) {
+      this.dead = true;
+    }
   }
 
   /**
-   * Zeichnet die Flasche.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws the bottle.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context.
    */
   draw(ctx) {
+    if (this.dead) return;
+
     if (this.splashing) {
       this.drawSplash(ctx);
       return;
@@ -158,36 +188,42 @@ class Bottle {
   }
 
   /**
-   * Zeichnet rotierende Flasche.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws the rotating bottle.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context.
    */
   drawRotation(ctx) {
     const img = this.rotationImages[this.frame];
 
-    if (img && img.complete && img.naturalWidth > 0) {
-      ctx.drawImage(img, this.x, this.y, this.w, this.h);
+    if (!img || !img.complete || img.naturalWidth === 0) {
       return;
     }
 
-    ctx.fillStyle = "#7b3f00";
-    ctx.fillRect(this.x, this.y, this.w, this.h);
+    ctx.save();
+
+    if (this.direction < 0) {
+      ctx.translate(this.x + this.w, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, this.y, this.w, this.h);
+    } else {
+      ctx.drawImage(img, this.x, this.y, this.w, this.h);
+    }
+
+    ctx.restore();
   }
 
   /**
-   * Zeichnet Splash.
-   * @param {CanvasRenderingContext2D} ctx - Canvas Kontext
+   * Draws the splash animation.
+   * @param {CanvasRenderingContext2D} ctx - Canvas context.
    */
   drawSplash(ctx) {
     const splashIndex = Math.min(this.frame, this.splashImages.length - 1);
     const img = this.splashImages[splashIndex];
 
-    if (img && img.complete && img.naturalWidth > 0) {
-      ctx.drawImage(img, this.x - 10, this.y - 10, this.w + 25, this.h + 20);
+    if (!img || !img.complete || img.naturalWidth === 0) {
       return;
     }
 
-    ctx.fillStyle = "rgba(255,255,255,0.65)";
-    ctx.fillRect(this.x, this.y, this.w, this.h / 2);
+    ctx.drawImage(img, this.x - 10, this.y - 10, this.w + 25, this.h + 20);
   }
 }
 
