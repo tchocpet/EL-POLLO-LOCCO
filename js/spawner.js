@@ -163,9 +163,9 @@ function spawnSmallEnemyAt(App, position) {
  */
 function getSmallEnemyPositions(App) {
   return [
-    { x: 1050, y: App.world.groundY - 42 },
-    { x: 1850, y: App.world.groundY - 42 },
-    { x: 2550, y: App.world.groundY - 42 },
+    { x: 1050, y: App.world.groundY - 40 },
+    { x: 1850, y: App.world.groundY - 40 },
+    { x: 2550, y: App.world.groundY - 40 },
   ];
 }
 

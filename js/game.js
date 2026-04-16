@@ -170,6 +170,8 @@ function registerGlobalApi() {
   window.canTakeDamage = canTakeDamage;
   window.safePlay = playAudioSafely;
   window.applyDamage = applyDamage;
+  window.stopGameForRotate = stopGameForRotate;
+  window.isGameRunning = isGameRunning;
 }
 
 /**
@@ -407,6 +409,26 @@ function resumeGame() {
   window.Screen.overlay(false);
   window.Screen.setPauseIcon(false);
   startBackgroundMusic(App);
+}
+
+/**
+ * Stops the running game because the device entered rotate mode.
+ */
+function stopGameForRotate() {
+  if (!App.running) return;
+  App.running = false;
+  App.paused = false;
+  stopLoop();
+  stopBackgroundMusic(App);
+}
+
+/**
+ * Returns whether the game is currently running.
+ *
+ * @returns {boolean}
+ */
+function isGameRunning() {
+  return !!App.running;
 }
 
 /**

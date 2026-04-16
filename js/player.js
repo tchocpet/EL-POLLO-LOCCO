@@ -2,22 +2,17 @@
  * Initializes the player module and registers its public API.
  */
 function initPlayerModule() {
-  registerPlayerApi();
+  registerPlayerApi(createPlayerClass());
 }
 
 /**
- * Registers the player class on the global window object.
- */
-function registerPlayerApi() {
-  window.Player = createPlayerClass();
-}
-
-/**
- * Creates the Player class.
+ * Creates the player class after BaseEntity is available.
  *
- * @returns {typeof Player}
+ * @returns {typeof window.BaseEntity}
  */
 function createPlayerClass() {
+  ensureBaseEntityExists();
+
   return class Player extends window.BaseEntity {
     /**
      * Creates a new player instance.
@@ -27,10 +22,7 @@ function createPlayerClass() {
      */
     constructor(x = 140, y = 140) {
       super(x, y, 50, 70);
-      this.speed = 300;
-      this.jumpPower = 500;
-      this.gravity = 1350;
-      this.grounded = false;
+      applyPlayerDefaults(this);
     }
 
     /**
@@ -41,11 +33,7 @@ function createPlayerClass() {
      * @param {object} world - World state.
      */
     update(dt, input, world) {
-      updatePlayerMovement(this, dt, input);
-      applyPlayerPhysics(this, dt);
-      movePlayer(this, dt);
-      clampPlayerInsideWorld(this, world);
-      resolvePlayerGroundCollision(this, world);
+      updatePlayerState(this, dt, input, world);
     }
 
     /**
@@ -55,26 +43,82 @@ function createPlayerClass() {
      * @param {number} [camX=0] - Camera x offset.
      */
     draw(ctx, camX = 0) {
-      drawPlayerBody(this, ctx, camX);
-      drawPlayerShadowMark(this, ctx, camX);
+      drawPlayerState(this, ctx, camX);
     }
   };
+}
+
+/**
+ * Throws an error when BaseEntity is missing.
+ */
+function ensureBaseEntityExists() {
+  if (window.BaseEntity) return;
+  throw new Error(
+    "BaseEntity is not available. Load and register entities.js before player.js init.",
+  );
+}
+
+/**
+ * Registers the player class on the global window object.
+ *
+ * @param {Function} PlayerClass - Player class.
+ */
+function registerPlayerApi(PlayerClass) {
+  window.Player = PlayerClass;
+}
+
+/**
+ * Applies default player values.
+ *
+ * @param {object} player - Player instance.
+ */
+function applyPlayerDefaults(player) {
+  player.speed = 300;
+  player.jumpPower = 500;
+  player.gravity = 1350;
+  player.grounded = false;
+}
+
+/**
+ * Updates the full player state.
+ *
+ * @param {object} player - Player instance.
+ * @param {number} dt - Delta time in seconds.
+ * @param {object} input - Input state.
+ * @param {object} world - World state.
+ */
+function updatePlayerState(player, dt, input, world) {
+  updatePlayerMovement(player, input);
+  applyPlayerPhysics(player, dt);
+  movePlayer(player, dt);
+  player.grounded = false;
+  clampPlayerInsideWorld(player, world);
+  resolvePlayerGroundCollision(player, world);
+}
+
+/**
+ * Draws the full player state.
+ *
+ * @param {object} player - Player instance.
+ * @param {CanvasRenderingContext2D} ctx - Canvas context.
+ * @param {number} camX - Camera x offset.
+ */
+function drawPlayerState(player, ctx, camX) {
+  drawPlayerBody(player, ctx, camX);
+  drawPlayerShadowMark(player, ctx, camX);
 }
 
 /**
  * Updates player movement input.
  *
  * @param {object} player - Player instance.
- * @param {number} dt - Delta time in seconds.
  * @param {object} input - Input state.
  */
-function updatePlayerMovement(player, dt, input) {
-  void dt;
-  const dir = getPlayerDirection(input);
-  player.vx = dir * player.speed;
+function updatePlayerMovement(player, input) {
+  const direction = getPlayerDirection(input);
+  player.vx = direction * player.speed;
   if (!shouldStartJump(player, input)) return;
-  player.vy = -player.jumpPower;
-  player.grounded = false;
+  startPlayerJump(player);
 }
 
 /**
@@ -97,6 +141,16 @@ function getPlayerDirection(input) {
 function shouldStartJump(player, input) {
   if (!input.jump) return false;
   return player.grounded;
+}
+
+/**
+ * Starts a player jump.
+ *
+ * @param {object} player - Player instance.
+ */
+function startPlayerJump(player) {
+  player.vy = -player.jumpPower;
+  player.grounded = false;
 }
 
 /**
@@ -127,7 +181,8 @@ function movePlayer(player, dt) {
  * @param {object} world - World state.
  */
 function clampPlayerInsideWorld(player, world) {
-  player.x = window.Util.clamp(player.x, 0, world.levelW - player.w);
+  const maxX = Math.max(0, world.levelW - player.w);
+  player.x = window.Util.clamp(player.x, 0, maxX);
 }
 
 /**
@@ -138,9 +193,7 @@ function clampPlayerInsideWorld(player, world) {
  */
 function resolvePlayerGroundCollision(player, world) {
   if (!hasGroundCollision(player, world)) return;
-  player.y = world.groundY - player.h;
-  player.vy = 0;
-  player.grounded = true;
+  setPlayerOnGround(player, world);
 }
 
 /**
@@ -152,6 +205,18 @@ function resolvePlayerGroundCollision(player, world) {
  */
 function hasGroundCollision(player, world) {
   return player.y + player.h >= world.groundY;
+}
+
+/**
+ * Places the player on the ground.
+ *
+ * @param {object} player - Player instance.
+ * @param {object} world - World state.
+ */
+function setPlayerOnGround(player, world) {
+  player.y = world.groundY - player.h;
+  player.vy = 0;
+  player.grounded = true;
 }
 
 /**

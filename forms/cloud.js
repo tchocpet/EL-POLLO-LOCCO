@@ -29,7 +29,7 @@ function createCloudClass() {
       this.y = 40;
       this.w = 500;
       this.h = 250;
-      this.speed = 18;
+      this.speed = 28;
       this.img = createCloudImage();
     }
 

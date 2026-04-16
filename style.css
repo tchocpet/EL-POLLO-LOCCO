@@ -61,7 +61,7 @@ body {
 
 .game-container {
   position: relative;
-  width: min(820px, 92vw);
+  width: min(900px, 92vw);
   aspect-ratio: 3 / 2;
   height: auto;
   border-radius: var(--radius);
@@ -72,7 +72,7 @@ body {
   align-items: center;
   background: #00000010;
 }
-/* Echter Browser-Fullscreen */
+
 #fullscreen:fullscreen {
   width: 100vw;
   height: 100vh;
@@ -269,7 +269,7 @@ canvas {
   position: absolute;
   inset: 0;
   z-index: 220;
-  display: block;
+  display: none;
   pointer-events: none;
 }
 
@@ -566,30 +566,50 @@ canvas {
   }
 }
 
-/* Tablet */
-@media only screen and (max-width: 1024px) and (min-width: 761px) {
-  .game-area-bottom {
-    display: block !important;
+/* ==========================
+   TABLET (z. B. iPad)
+   ========================== */
+@media only screen and (max-width: 1366px) and (min-width: 761px) {
+  .game-container {
+    width: 100vw;
+    height: 100dvh;
+    aspect-ratio: auto;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
   }
 
+  .game-area {
+    width: 100%;
+    height: 100%;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  /* Mobile Buttons am unteren Rand */
   .game-area-bottom-left {
-    left: 16px;
-    bottom: 16px;
+    left: 20px;
+    bottom: 20px;
   }
 
   .game-area-bottom-right {
-    right: 16px;
-    bottom: 16px;
+    right: 20px;
+    bottom: 20px;
   }
 
+  /* Größere Buttons für Tablets */
   .mobile-control-btn {
-    width: 68px;
-    height: 68px;
+    width: 70px;
+    height: 70px;
   }
 
   .mobile-control-btn img {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
   }
 }
 

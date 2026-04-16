@@ -1,5 +1,10 @@
 /**
- * Initializes the entities module and registers its public API.
+ * Registers the entities module API.
+ */
+registerEntitiesApi();
+
+/**
+ * Initializes the entities module.
  */
 function initEntitiesModule() {
   registerEntitiesApi();
@@ -9,8 +14,34 @@ function initEntitiesModule() {
  * Registers entity helpers on the global window object.
  */
 function registerEntitiesApi() {
-  window.Util = createUtilApi();
   window.BaseEntity = createBaseEntityClass();
+  window.Util = createUtilApi();
+}
+
+/**
+ * Creates the BaseEntity class.
+ *
+ * @returns {typeof BaseEntity}
+ */
+function createBaseEntityClass() {
+  return class BaseEntity {
+    /**
+     * Creates a new base entity.
+     *
+     * @param {number} x - Initial x position.
+     * @param {number} y - Initial y position.
+     * @param {number} w - Entity width.
+     * @param {number} h - Entity height.
+     */
+    constructor(x, y, w, h) {
+      this.x = x;
+      this.y = y;
+      this.w = w;
+      this.h = h;
+      this.vx = 0;
+      this.vy = 0;
+    }
+  };
 }
 
 /**
@@ -34,30 +65,4 @@ function createUtilApi() {
  */
 function clampValue(value, min, max) {
   return Math.max(min, Math.min(max, value));
-}
-
-/**
- * Creates the BaseEntity class.
- *
- * @returns {typeof BaseEntity}
- */
-function createBaseEntityClass() {
-  return class BaseEntity {
-    /**
-     * Creates a base entity instance.
-     *
-     * @param {number} x - X position.
-     * @param {number} y - Y position.
-     * @param {number} w - Width.
-     * @param {number} h - Height.
-     */
-    constructor(x, y, w, h) {
-      this.x = x;
-      this.y = y;
-      this.w = w;
-      this.h = h;
-      this.vx = 0;
-      this.vy = 0;
-    }
-  };
 }

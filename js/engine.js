@@ -9,7 +9,8 @@ function initEngineModule() {
  * Registers the engine API on the global window object.
  */
 function registerEngineApi() {
-  window.Engine = createEngineApi();
+  const api = createEngineApi();
+  window.Engine = api;
 }
 
 /**
@@ -18,55 +19,63 @@ function registerEngineApi() {
  * @returns {{start: Function, stop: Function}}
  */
 function createEngineApi() {
-  let rafId = null;
-  let last = 0;
-  let running = false;
+  const state = createEngineState();
+  return {
+    state,
+    start: () => startEngine(state),
+    stop: () => stopEngine(state),
+  };
+}
 
-  /**
-   * Starts the engine loop.
-   *
-   * @param {Function} tick - Frame callback.
-   */
-  function start(tick) {
-    stop();
-    running = true;
-    last = performance.now();
-    rafId = requestAnimationFrame((now) => loop(now, tick));
-  }
+function createEngineState() {
+  return {
+    running: false,
+    lastTime: 0,
+  };
+}
 
-  /**
-   * Stops the engine loop.
-   */
-  function stop() {
-    running = false;
-    if (!rafId) return;
-    cancelAnimationFrame(rafId);
-    rafId = null;
-  }
+/**
+ * Starts the engine loop.
+ *
+ * @param {Function} tick - Frame callback.
+ */
+function start(tick) {
+  stop();
+  running = true;
+  last = performance.now();
+  rafId = requestAnimationFrame((now) => loop(now, tick));
+}
 
-  /**
-   * Runs one engine loop step.
-   *
-   * @param {number} now - Current timestamp.
-   * @param {Function} tick - Frame callback.
-   */
-  function loop(now, tick) {
-    if (!running) return;
-    tick(getDeltaTime(now), now);
-    rafId = requestAnimationFrame((nextNow) => loop(nextNow, tick));
-  }
+/**
+ * Stops the engine loop.
+ */
+function stop() {
+  running = false;
+  if (!rafId) return;
+  cancelAnimationFrame(rafId);
+  rafId = null;
+}
 
-  /**
-   * Returns the clamped delta time.
-   *
-   * @param {number} now - Current timestamp.
-   * @returns {number}
-   */
-  function getDeltaTime(now) {
-    let dt = (now - last) / 1000;
-    last = now;
-    return Math.min(dt, 1 / 20);
-  }
+/**
+ * Runs one engine loop step.
+ *
+ * @param {number} now - Current timestamp.
+ * @param {Function} tick - Frame callback.
+ */
+function loop(now, tick) {
+  if (!running) return;
+  tick(getDeltaTime(now), now);
+  rafId = requestAnimationFrame((nextNow) => loop(nextNow, tick));
+}
 
-  return { start, stop };
+/**
+ * Returns the clamped delta time.
+ *
+ * @param {number} now - Current timestamp.
+ * @returns {number}
+ */
+function getDeltaTime(now) {
+  let dt = (now - last) / 1000;
+  last = now;
+  return Math.min(dt, 1 / 20);
 }

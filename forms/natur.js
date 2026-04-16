@@ -463,7 +463,7 @@ function updateNaturSleepMotion(natur, dtSec) {
 function updateNaturIdleState(natur, dtSec, input) {
   if (isNaturMoving(natur, input)) return resetNaturIdleState(natur);
   natur.idleTime += dtSec;
-  if (natur.idleTime > 1.5) natur.sleepMode = true;
+  if (natur.idleTime > 3) natur.sleepMode = true;
 }
 
 /**
