@@ -79,7 +79,7 @@ function resetCoinState(App) {
  * @param {object} App - The main application state.
  */
 function resetBottleState(App) {
-  App.bottleCount = 10;
+  App.bottleCount = 0;
   App.maxBottles = 10;
   App.groundBottles = [];
 }

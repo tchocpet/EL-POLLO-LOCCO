@@ -61,7 +61,7 @@ function createGroundBottleClass() {
     draw(ctx) {
       const image = this.images[this.frame];
       if (isGroundBottleImageDrawable(image)) {
-        ctx.drawImage(image, this.x, this.y, this.w, this.h);
+        ctx.drawImage(image, this.x, this.y + 18, this.w, this.h);
         return;
       }
       drawGroundBottleFallback(this, ctx);
@@ -135,5 +135,5 @@ function isGroundBottleImageDrawable(image) {
  */
 function drawGroundBottleFallback(bottle, ctx) {
   ctx.fillStyle = "#27ae60";
-  ctx.fillRect(bottle.x, bottle.y, bottle.w, bottle.h);
+  ctx.fillRect(bottle.x, bottle.y + 18, bottle.w, bottle.h);
 }

@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * Initializes the UI module and registers its public API.
  */
@@ -7,7 +9,7 @@ function initUiModule() {
 }
 
 /**
- * Creates the full UI module.
+ * Creates the UI module.
  *
  * @returns {{registerUiApi: Function}}
  */
@@ -51,28 +53,28 @@ function $(id) {
  * Registers public UI functions.
  *
  * @param {object} state - UI state.
- * @param {string[]} screenIds - Known screen ids.
+ * @param {string[]} screenIds - Screen ids.
  * @param {string[]} storyLines - Story lines.
  */
 function registerUiApi(state, screenIds, storyLines) {
-  window.initUi = () => runUiInit(screenIds);
+  window.initUi = () => initializeUi(screenIds);
   window.toggleMobileBtns = toggleMobileBtns;
-  window.goToControlScreen = () => goToControlScreen(screenIds);
+  window.goToControlScreen = () => openControlScreen(screenIds);
   window.goToBgstoryScreen = () =>
-    goToBgstoryScreen(state, screenIds, storyLines);
-  window.storyScreenGoBack = () => storyScreenGoBack(state, screenIds);
-  window.goBackToStartScreen = () => goBackToStartScreen(screenIds);
-  window.skipTyping = () => skipTyping(state);
-  window.startStoryTelling = () => startStoryTelling(state, storyLines);
+    openStoryScreen(state, screenIds, storyLines);
+  window.storyScreenGoBack = () => leaveStoryScreen(state, screenIds);
+  window.goBackToStartScreen = () => openStartScreen(screenIds);
+  window.skipTyping = () => requestTypingSkip(state);
+  window.startStoryTelling = () => beginStoryFlow(state, storyLines);
   window.setLoadingBtnText = setLoadingBtnText;
 }
 
 /**
  * Runs all UI initialization behavior.
  *
- * @param {string[]} screenIds - Known screen ids.
+ * @param {string[]} screenIds - Screen ids.
  */
-function runUiInit(screenIds) {
+function initializeUi(screenIds) {
   updateResponsiveUi(screenIds);
   bindResponsiveEvents(screenIds);
   addButtonHoverEventListener();
@@ -81,7 +83,7 @@ function runUiInit(screenIds) {
 /**
  * Hides all known screens.
  *
- * @param {string[]} screenIds - Known screen ids.
+ * @param {string[]} screenIds - Screen ids.
  */
 function hideAllScreens(screenIds) {
   screenIds.forEach(hideScreen);
@@ -99,7 +101,7 @@ function hideScreen(id) {
 /**
  * Shows one screen.
  *
- * @param {string[]} screenIds - Known screen ids.
+ * @param {string[]} screenIds - Screen ids.
  * @param {string} id - Screen id.
  */
 function showScreen(screenIds, id) {
@@ -127,16 +129,16 @@ function toggleMobileBtns() {
  * @returns {boolean}
  */
 function shouldShowMobileBtns() {
-  return Math.min(window.innerWidth, window.innerHeight) <= 760;
+  return isTouchDevice() && isSmallScreen();
 }
 
 /**
- * Returns whether the screen is small.
+ * Returns whether the screen is small enough for mobile UI.
  *
  * @returns {boolean}
  */
 function isSmallScreen() {
-  return Math.min(window.innerWidth, window.innerHeight) <= 900;
+  return Math.min(window.innerWidth, window.innerHeight) <= 1024;
 }
 
 /**
@@ -147,73 +149,31 @@ function isSmallScreen() {
 function isTouchDevice() {
   if ("ontouchstart" in window) return true;
   if ((navigator.maxTouchPoints || 0) > 0) return true;
-  return /Android|iPhone|iPad|Mobi/i.test(navigator.userAgent);
+  return /Android|iPhone|iPad|Mobi|Tablet/i.test(navigator.userAgent);
+}
+
+/**
+ * Updates all responsive UI parts.
+ *
+ * @param {string[]} screenIds - Screen ids.
+ */
+function updateResponsiveUi(screenIds) {
+  toggleMobileBtns();
+  decideInitialView(screenIds);
 }
 
 /**
  * Decides which initial screen should be shown.
  *
- * @param {string[]} screenIds - Known screen ids.
+ * @param {string[]} screenIds - Screen ids.
  */
 function decideInitialView(screenIds) {
   if (shouldShowRotateScreen()) {
-    handleRotateScreen(screenIds);
+    showRotateScreen(screenIds);
     return;
   }
 
-  handleStartScreen(screenIds);
-}
-
-/**
- * Handles the rotate screen state.
- *
- * @param {string[]} screenIds - Known screen ids.
- */
-function handleRotateScreen(screenIds) {
-  stopRunningGameForRotate();
-  showScreen(screenIds, "screen-rotate");
-}
-
-/**
- * Handles the normal start screen state.
- *
- * @param {string[]} screenIds - Known screen ids.
- */
-function handleStartScreen(screenIds) {
-  if (isAnyGameScreenActive()) return;
-  showScreen(screenIds, "screen-start");
-}
-
-/**
- * Stops the running game before showing the rotate screen.
- */
-function stopRunningGameForRotate() {
-  if (typeof window.isGameRunning !== "function") return;
-  if (!window.isGameRunning()) return;
-  if (typeof window.stopGameForRotate === "function") {
-    window.stopGameForRotate();
-  }
-}
-
-/**
- * Returns whether any gameplay-related screen is active.
- *
- * @returns {boolean}
- */
-function isAnyGameScreenActive() {
-  return isVisible("screen-loading") || isVisible("confirm-dialog");
-}
-
-/**
- * Returns whether one screen is currently visible.
- *
- * @param {string} id - Screen id.
- * @returns {boolean}
- */
-function isVisible(id) {
-  const element = $(id);
-  if (!element) return false;
-  return !element.classList.contains("d-none");
+  showStartScreenIfNeeded(screenIds);
 }
 
 /**
@@ -240,26 +200,123 @@ function isPortraitMode() {
  * @returns {boolean}
  */
 function shouldUseMobileLayout() {
-  return isSmallScreen() || isTabletDevice();
+  return isTouchDevice() && isSmallScreen();
 }
 
 /**
- * Returns whether the current device looks like a tablet.
+ * Shows the rotate screen.
+ *
+ * @param {string[]} screenIds - Screen ids.
+ */
+function showRotateScreen(screenIds) {
+  stopRunningGameForRotate();
+  hideAllScreens(screenIds);
+  showScreen(screenIds, "screen-rotate");
+}
+
+/**
+ * Shows the start screen when no blocking screen is active.
+ *
+ * @param {string[]} screenIds - Screen ids.
+ */
+function showStartScreenIfNeeded(screenIds) {
+  if (isAnyGameScreenActive()) return;
+  hideAllScreens(screenIds);
+  showScreen(screenIds, "screen-start");
+}
+
+/**
+ * Stops the running game before showing the rotate screen.
+ */
+function stopRunningGameForRotate() {
+  if (typeof window.isGameRunning !== "function") return;
+  if (!window.isGameRunning()) return;
+  if (typeof window.stopGameForRotate !== "function") return;
+  window.stopGameForRotate();
+}
+
+/**
+ * Returns whether any gameplay-related screen is active.
  *
  * @returns {boolean}
  */
-function isTabletDevice() {
-  return /iPad|Tablet|Android(?!.*Mobile)/i.test(navigator.userAgent);
+function isAnyGameScreenActive() {
+  if (isVisible("screen-loading")) return true;
+  return isVisible("confirm-dialog");
 }
 
 /**
- * Updates all responsive UI parts.
+ * Returns whether one screen is currently visible.
  *
- * @param {string[]} screenIds - Known screen ids.
+ * @param {string} id - Screen id.
+ * @returns {boolean}
  */
-function updateResponsiveUi(screenIds) {
-  toggleMobileBtns();
-  decideInitialView(screenIds);
+function isVisible(id) {
+  const element = $(id);
+  if (!element) return false;
+  return !element.classList.contains("d-none");
+}
+
+/**
+ * Requests skipping the current typing animation.
+ *
+ * @param {object} state - UI state.
+ */
+function requestTypingSkip(state) {
+  state.skipRequested = true;
+}
+
+/**
+ * Starts the full story flow.
+ *
+ * @param {object} state - UI state.
+ * @param {string[]} storyLines - Story lines.
+ */
+function beginStoryFlow(state, storyLines) {
+  showNextStoryLine(state, storyLines);
+}
+
+/**
+ * Opens the controls screen.
+ *
+ * @param {string[]} screenIds - Screen ids.
+ */
+function openControlScreen(screenIds) {
+  showScreen(screenIds, "screen-controls");
+}
+
+/**
+ * Opens the story screen.
+ *
+ * @param {object} state - UI state.
+ * @param {string[]} screenIds - Screen ids.
+ * @param {string[]} storyLines - Story lines.
+ */
+function openStoryScreen(state, screenIds, storyLines) {
+  showScreen(screenIds, "screen--story");
+  resetStoryState(state);
+  configureSkipButton(state);
+  beginStoryFlow(state, storyLines);
+}
+
+/**
+ * Leaves the story screen.
+ *
+ * @param {object} state - UI state.
+ * @param {string[]} screenIds - Screen ids.
+ */
+function leaveStoryScreen(state, screenIds) {
+  clearTyping(state);
+  showScreen(screenIds, "screen-start");
+}
+
+/**
+ * Returns to the start screen.
+ *
+ * @param {string[]} screenIds - Screen ids.
+ */
+function openStartScreen(screenIds) {
+  showScreen(screenIds, "screen-start");
 }
 
 /**
@@ -274,22 +331,54 @@ function clearTyping(state) {
 }
 
 /**
- * Requests skipping the current typing animation.
+ * Resets story state values.
  *
  * @param {object} state - UI state.
  */
-function skipTyping(state) {
-  state.skipRequested = true;
+function resetStoryState(state) {
+  state.storyIndex = 0;
+  state.charIndex = 0;
+  state.skipRequested = false;
+  clearTyping(state);
+}
+
+/**
+ * Configures the skip button.
+ *
+ * @param {object} state - UI state.
+ */
+function configureSkipButton(state) {
+  const button = $("skip-btn");
+  if (!button) return;
+  button.innerText = "Skip";
+  button.onclick = () => requestTypingSkip(state);
+}
+
+/**
+ * Shows the next story line.
+ *
+ * @param {object} state - UI state.
+ * @param {string[]} storyLines - Story lines.
+ */
+function showNextStoryLine(state, storyLines) {
+  if (state.storyIndex >= storyLines.length) {
+    configureStoryStartButton();
+    return;
+  }
+
+  const line = storyLines[state.storyIndex];
+  state.storyIndex += 1;
+  typeStoryLine(state, line, () => showNextStoryLine(state, storyLines));
 }
 
 /**
  * Types one story line.
  *
  * @param {object} state - UI state.
- * @param {string} line - Story line text.
- * @param {Function} onDone - Callback after the line is done.
+ * @param {string} line - Story line.
+ * @param {Function} onDone - Done callback.
  */
-function typeLine(state, line, onDone) {
+function typeStoryLine(state, line, onDone) {
   const textElement = $("story-p");
   if (!textElement) return;
 
@@ -315,25 +404,25 @@ function prepareTyping(state, textElement) {
  * Runs one typing step.
  *
  * @param {object} state - UI state.
- * @param {string} line - Story line text.
+ * @param {string} line - Story line.
  * @param {HTMLElement} textElement - Story text element.
- * @param {Function} onDone - Callback after the line is done.
+ * @param {Function} onDone - Done callback.
  */
 function runTypingStep(state, line, textElement, onDone) {
-  if (handleSkipRequested(state, line, textElement, onDone)) return;
-  typeNextChar(state, line, textElement, onDone);
+  if (handleTypingSkip(state, line, textElement, onDone)) return;
+  typeNextCharacter(state, line, textElement, onDone);
 }
 
 /**
  * Handles skip behavior during typing.
  *
  * @param {object} state - UI state.
- * @param {string} line - Story line text.
+ * @param {string} line - Story line.
  * @param {HTMLElement} textElement - Story text element.
- * @param {Function} onDone - Callback after the line is done.
+ * @param {Function} onDone - Done callback.
  * @returns {boolean}
  */
-function handleSkipRequested(state, line, textElement, onDone) {
+function handleTypingSkip(state, line, textElement, onDone) {
   if (!state.skipRequested) return false;
 
   state.skipRequested = false;
@@ -347,11 +436,11 @@ function handleSkipRequested(state, line, textElement, onDone) {
  * Types the next character.
  *
  * @param {object} state - UI state.
- * @param {string} line - Story line text.
+ * @param {string} line - Story line.
  * @param {HTMLElement} textElement - Story text element.
- * @param {Function} onDone - Callback after the line is done.
+ * @param {Function} onDone - Done callback.
  */
-function typeNextChar(state, line, textElement, onDone) {
+function typeNextCharacter(state, line, textElement, onDone) {
   textElement.textContent += line.charAt(state.charIndex);
   state.charIndex += 1;
 
@@ -362,116 +451,21 @@ function typeNextChar(state, line, textElement, onDone) {
 }
 
 /**
- * Starts the full story flow.
- *
- * @param {object} state - UI state.
- * @param {string[]} storyLines - Story lines.
- */
-function startStoryTelling(state, storyLines) {
-  showNextLine(state, storyLines);
-}
-
-/**
- * Shows the next story line.
- *
- * @param {object} state - UI state.
- * @param {string[]} storyLines - Story lines.
- */
-function showNextLine(state, storyLines) {
-  if (state.storyIndex >= storyLines.length) {
-    setupStoryStartButton();
-    return;
-  }
-
-  const line = storyLines[state.storyIndex];
-  state.storyIndex += 1;
-  typeLine(state, line, () => showNextLine(state, storyLines));
-}
-
-/**
  * Configures the story button as start button.
  */
-function setupStoryStartButton() {
+function configureStoryStartButton() {
   const button = $("skip-btn");
   if (!button) return;
   button.innerText = "Start";
-  button.onclick = handleStoryStartClick;
+  button.onclick = startGameFromStory;
 }
 
 /**
  * Starts the game from the story screen.
  */
-function handleStoryStartClick() {
-  if (typeof window.startLoading === "function") {
-    window.startLoading();
-  }
-}
-
-/**
- * Opens the controls screen.
- *
- * @param {string[]} screenIds - Known screen ids.
- */
-function goToControlScreen(screenIds) {
-  showScreen(screenIds, "screen-controls");
-}
-
-/**
- * Opens the story screen.
- *
- * @param {object} state - UI state.
- * @param {string[]} screenIds - Known screen ids.
- * @param {string[]} storyLines - Story lines.
- */
-function goToBgstoryScreen(state, screenIds, storyLines) {
-  showScreen(screenIds, "screen--story");
-  resetStoryState(state);
-  setupSkipButton(state);
-  startStoryTelling(state, storyLines);
-}
-
-/**
- * Resets story state values.
- *
- * @param {object} state - UI state.
- */
-function resetStoryState(state) {
-  state.storyIndex = 0;
-  state.charIndex = 0;
-  state.skipRequested = false;
-  clearTyping(state);
-}
-
-/**
- * Configures the skip button.
- *
- * @param {object} state - UI state.
- */
-function setupSkipButton(state) {
-  const button = $("skip-btn");
-  if (!button) return;
-  button.innerText = "Skip";
-  button.onclick = () => skipTyping(state);
-}
-
-/**
- * Leaves the story screen.
- *
- * @param {object} state - UI state.
- * @param {string[]} screenIds - Known screen ids.
- */
-function storyScreenGoBack(state, screenIds) {
-  clearTyping(state);
-  showScreen(screenIds, "screen-start");
-}
-
-/**
- * Returns to the start screen.
- *
- * @param {string[]} screenIds - Known screen ids.
- */
-function goBackToStartScreen(screenIds) {
-  showScreen(screenIds, "screen-start");
+function startGameFromStory() {
+  if (typeof window.startLoading !== "function") return;
+  window.startLoading();
 }
 
 /**
@@ -531,13 +525,30 @@ function playHoverSound() {
 /**
  * Binds responsive event listeners.
  *
- * @param {string[]} screenIds - Known screen ids.
+ * @param {string[]} screenIds - Screen ids.
  */
 function bindResponsiveEvents(screenIds) {
+  addResizeHandler(screenIds);
+  addOrientationHandler(screenIds);
+}
+
+/**
+ * Adds the resize handler.
+ *
+ * @param {string[]} screenIds - Screen ids.
+ */
+function addResizeHandler(screenIds) {
   window.addEventListener("resize", () => updateResponsiveUi(screenIds), {
     passive: true,
   });
+}
 
+/**
+ * Adds the orientation handler.
+ *
+ * @param {string[]} screenIds - Screen ids.
+ */
+function addOrientationHandler(screenIds) {
   window.addEventListener(
     "orientationchange",
     () => updateResponsiveUi(screenIds),

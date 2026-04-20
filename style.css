@@ -322,7 +322,8 @@ canvas {
 }
 
 .is-off {
-  opacity: 0.78;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ==========================
@@ -583,6 +584,9 @@ canvas {
     width: 100%;
     height: 100%;
   }
+  #fullscreen-btn {
+    display: none !important;
+  }
 
   canvas {
     width: 100%;
@@ -633,6 +637,10 @@ canvas {
     height: 100%;
   }
 
+  #fullscreen-btn {
+    display: none !important;
+  }
+
   canvas {
     display: block;
     width: 100%;
@@ -664,6 +672,10 @@ canvas {
     border-radius: 14px;
   }
 
+  #fullscreen-btn {
+    display: none !important;
+  }
+
   .screen-rotate p {
     font-size: 1.5rem;
   }
@@ -693,5 +705,8 @@ canvas {
 @media only screen and (max-height: 480px) {
   .legal-notice {
     display: none;
+  }
+  #fullscreen-btn {
+    display: none !important;
   }
 }

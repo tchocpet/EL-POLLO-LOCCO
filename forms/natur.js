@@ -135,6 +135,9 @@ function createNaturAnimationState() {
     throwFrame: 0,
     throwTimer: 0,
     throwFps: 10,
+    sleepFrame: 0,
+    sleepTimer: 0,
+    sleepFps: 6,
   };
 }
 
@@ -150,7 +153,7 @@ function createNaturImageState() {
     hurt: [],
     throw: [],
     idle: null,
-    sleep: null,
+    sleep: [],
   };
 }
 
@@ -223,8 +226,8 @@ function loadNaturIdleImage(natur) {
  * @param {object} natur - Natur instance.
  */
 function loadNaturSleepImage(natur) {
-  natur.images.sleep = createNaturImage(
-    "img/2_character_pepe/1_idle/long_idle/I-11.png",
+  getNaturSleepPaths().forEach((src) =>
+    pushNaturImage(natur.images.sleep, src),
   );
 }
 
@@ -255,17 +258,20 @@ function createNaturImage(src) {
  *
  * @returns {string[]}
  */
-function getNaturWalkPaths() {
+function getNaturSleepPaths() {
   return [
-    "img/2_character_pepe/2_walk/W-21.png",
-    "img/2_character_pepe/2_walk/W-22.png",
-    "img/2_character_pepe/2_walk/W-23.png",
-    "img/2_character_pepe/2_walk/W-24.png",
-    "img/2_character_pepe/2_walk/W-25.png",
-    "img/2_character_pepe/2_walk/W-26.png",
+    "img/2_character_pepe/1_idle/long_idle/I-11.png",
+    "img/2_character_pepe/1_idle/long_idle/I-12.png",
+    "img/2_character_pepe/1_idle/long_idle/I-13.png",
+    "img/2_character_pepe/1_idle/long_idle/I-14.png",
+    "img/2_character_pepe/1_idle/long_idle/I-15.png",
+    "img/2_character_pepe/1_idle/long_idle/I-16.png",
+    "img/2_character_pepe/1_idle/long_idle/I-17.png",
+    "img/2_character_pepe/1_idle/long_idle/I-18.png",
+    "img/2_character_pepe/1_idle/long_idle/I-19.png",
+    "img/2_character_pepe/1_idle/long_idle/I-20.png",
   ];
 }
-
 /**
  * Returns jump image paths.
  *
@@ -303,6 +309,17 @@ function getNaturHurtPaths() {
  *
  * @returns {string[]}
  */
+function getNaturWalkPaths() {
+  return [
+    "img/2_character_pepe/2_walk/W-21.png",
+    "img/2_character_pepe/2_walk/W-22.png",
+    "img/2_character_pepe/2_walk/W-23.png",
+    "img/2_character_pepe/2_walk/W-24.png",
+    "img/2_character_pepe/2_walk/W-25.png",
+    "img/2_character_pepe/2_walk/W-26.png",
+  ];
+}
+
 function getNaturThrowPaths() {
   return [
     "img/2_character_pepe/2_walk/W-21.png",
@@ -312,7 +329,7 @@ function getNaturThrowPaths() {
 }
 
 /**
- * Resets the player position.
+ * Returns throw image paths.
  *
  * @param {object} natur - Natur instance.
  */
@@ -442,15 +459,32 @@ function lowerNaturThrowTime(natur, dtSec) {
   if (natur.throwTime < 0) natur.throwTime = 0;
 }
 
+function updateNaturSleepMotion(natur, dtSec) {
+  natur.sleepFloat += dtSec * 2.2;
+  natur.sleepWave += dtSec * 3.5;
+}
+
 /**
  * Updates sleep floating motion.
  *
  * @param {object} natur - Natur instance.
  * @param {number} dtSec - Delta time in seconds.
  */
-function updateNaturSleepMotion(natur, dtSec) {
-  natur.sleepFloat += dtSec * 2.2;
-  natur.sleepWave += dtSec * 3.5;
+function updateNaturSleepAnimation(natur, dtMs) {
+  if (!natur.sleepMode) return resetNaturSleepAnimation(natur);
+  if (natur.images.sleep.length === 0) return resetNaturSleepAnimation(natur);
+
+  natur.anim.sleepTimer += dtMs;
+  if (natur.anim.sleepTimer < 1000 / natur.anim.sleepFps) return;
+
+  natur.anim.sleepTimer = 0;
+  natur.anim.sleepFrame =
+    (natur.anim.sleepFrame + 1) % natur.images.sleep.length;
+}
+
+function resetNaturSleepAnimation(natur) {
+  natur.anim.sleepFrame = 0;
+  natur.anim.sleepTimer = 0;
 }
 
 /**
@@ -605,6 +639,7 @@ function updateNaturAnimation(natur, dtMs, assets) {
   updateNaturJumpAnimation(natur, dtMs);
   updateNaturHurtAnimation(natur, dtMs);
   updateNaturThrowAnimation(natur, dtMs);
+  updateNaturSleepAnimation(natur, dtMs);
 }
 
 /**
@@ -791,7 +826,8 @@ function getCurrentNaturImage(natur, assets) {
   if (isNaturJumping(natur))
     return natur.images.jump[natur.anim.jumpFrame] || null;
   if (isNaturWalking(natur)) return getNaturWalkImage(natur, assets);
-  if (hasNaturSleepImage(natur)) return natur.images.sleep;
+  if (hasNaturSleepImage(natur))
+    return natur.images.sleep[natur.anim.sleepFrame];
   if (hasNaturIdleImage(natur)) return natur.images.idle;
   if (assets.playerIdle) return assets.playerIdle;
   return null;
@@ -848,7 +884,8 @@ function getNaturWalkImage(natur, assets) {
  */
 function hasNaturSleepImage(natur) {
   if (!natur.sleepMode) return false;
-  return isNaturImageDrawable(natur.images.sleep);
+  if (natur.images.sleep.length === 0) return false;
+  return isNaturImageDrawable(natur.images.sleep[natur.anim.sleepFrame]);
 }
 
 /**
@@ -947,9 +984,13 @@ function drawNaturSleepLetters(natur, ctx) {
  * @param {CanvasRenderingContext2D} ctx - Canvas context.
  */
 function drawNaturSleepLetterOne(natur, ctx) {
-  const x = natur.x + natur.w * 0.78 + Math.sin(natur.sleepWave) * 4;
-  const y = natur.y + natur.h * 0.35 + Math.sin(natur.sleepFloat) * 6;
-  ctx.font = "bold 22px Arial";
+  const x = natur.x + natur.w * 0.99 + Math.sin(natur.sleepWave + 0.4) * 10;
+  const y = natur.y + natur.h * 0.18 + Math.sin(natur.sleepFloat + 0.3) * 10;
+
+  ctx.font = "bold 24px Arial";
+  ctx.strokeStyle = "rgba(0,0,0,0.28)";
+  ctx.fillStyle = `rgba(255,255,255,${0.75 + Math.sin(natur.sleepFloat + 0.3) * 0.2})`;
+
   ctx.strokeText("Z", x, y);
   ctx.fillText("Z", x, y);
 }

@@ -45,7 +45,7 @@ function createAppState() {
     maxCoins: 0,
     killedEnemies: 0,
     thrownBottles: 0,
-    bottleCount: 10,
+    bottleCount: 0,
     maxBottles: 10,
     groundBottles: [],
     clouds: [],
@@ -194,6 +194,31 @@ function init() {
   showStartScreen();
 }
 
+function initApp() {
+  initHelpersModule();
+  initEntitiesModule();
+  initEngineModule();
+  initAudioModule();
+  initScreenModule();
+  initCameraModule();
+  initCollisionHelperModule();
+  initCollisionModule();
+  initHudModule();
+  initSpawnerModule();
+  initPlayerModule();
+  initBossModule();
+  initBottleModule();
+  initCloudModule();
+  initCoinModule();
+  initEnemyModule();
+  initGroundBottleModule();
+  initNaturModule();
+  initGameModule();
+  init();
+  initUiModule();
+  initUi();
+}
+
 /**
  * Starts the loading screen before the game begins.
  */
@@ -212,12 +237,13 @@ function startLoading() {
 async function startGame() {
   if (!ensureCanvasReady()) return;
   activateGame();
-  prepareGameScreen();
   await ensureAssets(App, ASSETS, PATHS);
   resetGameState(App);
   spawnGameObjects();
+  prepareGameScreen();
   startBackgroundMusic(App);
   focusCanvas();
+  render();
   startLoop();
 }
 

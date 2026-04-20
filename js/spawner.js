@@ -174,11 +174,17 @@ function getSmallEnemyPositions(App) {
  *
  * @param {object} App - Main application state.
  */
-function spawnGroundBottles(App) {
-  App.groundBottles = [];
-  getGroundBottlePositions(App).forEach((position) =>
-    spawnGroundBottleAt(App, position),
-  );
+function getGroundBottlePositions(App) {
+  return [
+    { x: 420, y: App.world.groundY - 60 },
+    { x: 760, y: App.world.groundY - 60 },
+    { x: 1100, y: App.world.groundY - 60 },
+    { x: 1450, y: App.world.groundY - 60 },
+    { x: 1820, y: App.world.groundY - 60 },
+    { x: 2180, y: App.world.groundY - 60 },
+    { x: 2550, y: App.world.groundY - 60 },
+    { x: 2920, y: App.world.groundY - 60 },
+  ];
 }
 
 /**
@@ -197,23 +203,26 @@ function spawnGroundBottleAt(App, position) {
  * @param {object} App - Main application state.
  * @returns {Array<{x:number,y:number}>}
  */
+function spawnGroundBottles(App) {
+  App.groundBottles = [];
+
+  getGroundBottlePositions(App).forEach((pos) => {
+    App.groundBottles.push(new GroundBottle(pos.x, pos.y));
+  });
+}
+
 function getGroundBottlePositions(App) {
   return [
-    { x: 320, y: App.world.groundY - 46 },
-    { x: 520, y: App.world.groundY - 46 },
-    { x: 760, y: App.world.groundY - 46 },
-    { x: 980, y: App.world.groundY - 46 },
-    { x: 1180, y: App.world.groundY - 46 },
-    { x: 1380, y: App.world.groundY - 46 },
-    { x: 1580, y: App.world.groundY - 46 },
-    { x: 1780, y: App.world.groundY - 46 },
-    { x: 1980, y: App.world.groundY - 46 },
-    { x: 2180, y: App.world.groundY - 46 },
-    { x: 2380, y: App.world.groundY - 46 },
-    { x: 2580, y: App.world.groundY - 46 },
-    { x: 2780, y: App.world.groundY - 46 },
-    { x: 2950, y: App.world.groundY - 46 },
-    { x: 3100, y: App.world.groundY - 46 },
+    { x: 180, y: App.world.groundY - 78 },
+    { x: 280, y: App.world.groundY - 78 },
+    { x: 380, y: App.world.groundY - 78 },
+    { x: 480, y: App.world.groundY - 78 },
+    { x: 580, y: App.world.groundY - 78 },
+    { x: 680, y: App.world.groundY - 78 },
+    { x: 780, y: App.world.groundY - 78 },
+    { x: 880, y: App.world.groundY - 78 },
+    { x: 980, y: App.world.groundY - 78 },
+    { x: 1080, y: App.world.groundY - 78 },
   ];
 }
 

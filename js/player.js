@@ -2,7 +2,8 @@
  * Initializes the player module and registers its public API.
  */
 function initPlayerModule() {
-  registerPlayerApi(createPlayerClass());
+  ensureBaseEntityExists();
+  registerPlayerApi();
 }
 
 /**
@@ -11,37 +12,16 @@ function initPlayerModule() {
  * @returns {typeof window.BaseEntity}
  */
 function createPlayerClass() {
-  ensureBaseEntityExists();
-
   return class Player extends window.BaseEntity {
-    /**
-     * Creates a new player instance.
-     *
-     * @param {number} [x=140] - Initial x position.
-     * @param {number} [y=140] - Initial y position.
-     */
     constructor(x = 140, y = 140) {
       super(x, y, 50, 70);
       applyPlayerDefaults(this);
     }
 
-    /**
-     * Updates the player state for one frame.
-     *
-     * @param {number} dt - Delta time in seconds.
-     * @param {object} input - Input state.
-     * @param {object} world - World state.
-     */
     update(dt, input, world) {
       updatePlayerState(this, dt, input, world);
     }
 
-    /**
-     * Draws the player.
-     *
-     * @param {CanvasRenderingContext2D} ctx - Canvas context.
-     * @param {number} [camX=0] - Camera x offset.
-     */
     draw(ctx, camX = 0) {
       drawPlayerState(this, ctx, camX);
     }
@@ -227,8 +207,11 @@ function setPlayerOnGround(player, world) {
  * @param {number} camX - Camera x offset.
  */
 function drawPlayerBody(player, ctx, camX) {
-  ctx.fillStyle = "rgba(255,255,255,0.90)";
-  ctx.fillRect(player.x - camX, player.y, player.w, player.h);
+  const img = window.ASSETS.playerIdle;
+
+  if (!img) return;
+
+  ctx.drawImage(img, player.x - camX, player.y, 120, 160);
 }
 
 /**

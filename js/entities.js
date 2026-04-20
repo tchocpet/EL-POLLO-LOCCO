@@ -1,9 +1,4 @@
 /**
- * Registers the entities module API.
- */
-registerEntitiesApi();
-
-/**
  * Initializes the entities module.
  */
 function initEntitiesModule() {
@@ -15,6 +10,7 @@ function initEntitiesModule() {
  */
 function registerEntitiesApi() {
   window.BaseEntity = createBaseEntityClass();
+
   window.Util = createUtilApi();
 }
 
