@@ -1,269 +1,182 @@
 /**
- * Toggles the pause state and updates music playback.
+ * Loads all player images.
  *
- * @param {object} App - Main application state.
+ * @param {object} natur - Player instance.
  */
-function pauseGame(App) {
-  if (!App.running) return;
-  App.paused = !App.paused;
-  window.Screen.setPauseIcon(App.paused);
-  syncPauseAudio(App);
+function loadNaturImages(natur) {
+  loadNaturWalkImages(natur);
+  loadNaturJumpImages(natur);
+  loadNaturHurtImages(natur);
+  loadNaturThrowImages(natur);
+  loadNaturIdleImage(natur);
+  loadNaturSleepImage(natur);
 }
 
 /**
- * Opens the quit dialog and pauses the game.
+ * Loads all walk images.
  *
- * @param {object} App - Main application state.
+ * @param {object} natur - Player instance.
  */
-function quitGame(App) {
-  if (!App.running) return;
-  App.paused = true;
-  showQuitDialog();
-  stopBackgroundMusic(App);
-}
-
-/**
- * Resumes the game after pause or quit dialog.
- *
- * @param {object} App - Main application state.
- */
-function resumeGame(App) {
-  hideQuitDialog();
-  App.paused = false;
-  window.Screen.overlay(false);
-  window.Screen.setPauseIcon(false);
-  startBackgroundMusic(App);
-}
-
-/**
- * Returns to the start screen and resets the game state.
- *
- * @param {object} App - Main application state.
- */
-function goBackToHome(App) {
-  App.running = false;
-  stopGameLoop(App);
-  stopBackgroundMusic(App);
-  resetHomeScreenUi();
-  resetGameState(App);
-}
-
-/**
- * Restarts the game by using the globally registered start function.
- *
- * @param {object} App - Main application state.
- */
-function playAgain(App) {
-  void App;
-  window.startGame();
-}
-
-/**
- * Handles the lose state.
- *
- * @param {object} App - Main application state.
- */
-function loseGame(App) {
-  App.running = false;
-  stopGameLoop(App);
-  stopBackgroundMusic(App);
-  showEndScreen(App, "screen-end-lose");
-  revealEndButtons("#screen-end-lose button");
-}
-
-/**
- * Handles the win state.
- *
- * @param {object} App - Main application state.
- */
-function winGame(App) {
-  App.running = false;
-  App.gameWon = true;
-  stopGameLoop(App);
-  stopBackgroundMusic(App);
-  showEndScreen(App, "screen-end-win");
-  revealEndButtons("#screen-end-win button");
-}
-
-/**
- * Stops the current animation loop.
- *
- * @param {object} App - Main application state.
- */
-function stopGameLoop(App) {
-  if (!App.rafId) return;
-  cancelAnimationFrame(App.rafId);
-  App.rafId = null;
-}
-
-/**
- * Shows the quit dialog.
- */
-function showQuitDialog() {
-  window.Screen.setPauseIcon(true);
-  window.Screen.showById("confirm-dialog");
-  window.Screen.overlay(true);
-}
-
-/**
- * Hides the quit dialog.
- */
-function hideQuitDialog() {
-  const dialog = document.getElementById("confirm-dialog");
-  if (dialog) dialog.classList.add("d-none");
-}
-
-/**
- * Resets the home screen UI.
- */
-function resetHomeScreenUi() {
-  window.Screen.overlay(false);
-  window.Screen.setPauseIcon(false);
-  window.Screen.showById("screen-start");
-}
-
-/**
- * Shows an end screen and updates its statistics.
- *
- * @param {object} App - Main application state.
- * @param {string} screenId - End screen id.
- */
-function showEndScreen(App, screenId) {
-  setEndStats(App, screenId);
-  window.Screen.showById(screenId);
-  window.Screen.overlay(true);
-}
-
-/**
- * Reveals all buttons inside an end screen.
- *
- * @param {string} selector - CSS selector for the buttons.
- */
-function revealEndButtons(selector) {
-  document.querySelectorAll(selector).forEach((button) => {
-    button.classList.remove("d-none");
+function loadNaturWalkImages(natur) {
+  getNaturWalkPaths().forEach((src) => {
+    pushNaturImage(natur.images.walk, src);
   });
 }
 
 /**
- * Updates the end screen statistics.
+ * Loads all jump images.
  *
- * @param {object} App - Main application state.
- * @param {string} screenId - End screen id.
+ * @param {object} natur - Player instance.
  */
-function setEndStats(App, screenId) {
-  const screen = document.getElementById(screenId);
-  if (!screen) return;
-  const stats = findOrCreateEndStats(screen);
-  stats.innerHTML = buildEndStatsMarkup(App);
+function loadNaturJumpImages(natur) {
+  getNaturJumpPaths().forEach((src) => {
+    pushNaturImage(natur.images.jump, src);
+  });
 }
 
 /**
- * Finds or creates the end stats element.
+ * Loads all hurt images.
  *
- * @param {HTMLElement} screen - End screen element.
- * @returns {HTMLElement}
+ * @param {object} natur - Player instance.
  */
-function findOrCreateEndStats(screen) {
-  let stats = screen.querySelector(".end-stats");
-  if (stats) return stats;
-  stats = document.createElement("div");
-  stats.className = "end-stats";
-  screen.appendChild(stats);
-  return stats;
+function loadNaturHurtImages(natur) {
+  getNaturHurtPaths().forEach((src) => {
+    pushNaturImage(natur.images.hurt, src);
+  });
 }
 
 /**
- * Builds the end stats HTML markup.
+ * Loads all throw images.
  *
- * @param {object} App - Main application state.
- * @returns {string}
+ * @param {object} natur - Player instance.
  */
-function buildEndStatsMarkup(App) {
-  return `
-    <p>Coins: ${App.coinCount} / ${App.maxCoins}</p>
-    <p>Kills: ${App.killedEnemies}</p>
-    <p>Thrown Bottles: ${App.thrownBottles}</p>
-    <p>Boss HP Left: ${App.bossHealth}</p>
-  `;
+function loadNaturThrowImages(natur) {
+  getNaturThrowPaths().forEach((src) => {
+    pushNaturImage(natur.images.throw, src);
+  });
 }
 
 /**
- * Toggles fullscreen mode for the game container.
+ * Loads the idle image.
+ *
+ * @param {object} natur - Player instance.
  */
-function toggleFullScreen() {
-  const element = document.getElementById("fullscreen") || document.body;
-
-  if (document.fullscreenElement) {
-    document.exitFullscreen?.();
-    return;
-  }
-
-  element.requestFullscreen?.();
+function loadNaturIdleImage(natur) {
+  natur.images.idle = createNaturImage(
+    "img/2_character_pepe/1_idle/idle/I-1.png",
+  );
 }
 
 /**
- * Returns whether the player can take damage.
+ * Loads all sleep images.
  *
- * @param {object} App - Main application state.
- * @param {number} currentTime - Current timestamp.
- * @returns {boolean}
+ * @param {object} natur - Player instance.
  */
-function canTakeDamage(App, currentTime) {
-  return currentTime - App.lastHitTime > App.invulnerableMs;
+function loadNaturSleepImage(natur) {
+  getNaturSleepPaths().forEach((src) => {
+    pushNaturImage(natur.images.sleep, src);
+  });
 }
 
 /**
- * Safely plays an audio element if sound is enabled.
+ * Pushes one image into a target list.
  *
- * @param {object} App - Main application state.
- * @param {HTMLAudioElement|null} audio - Audio element.
+ * @param {HTMLImageElement[]} list - Target list.
+ * @param {string} src - Image source path.
  */
-function safePlay(App, audio) {
-  if (!audio || !App.soundOn) return;
-
-  try {
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
-  } catch (_) {}
+function pushNaturImage(list, src) {
+  list.push(createNaturImage(src));
 }
 
 /**
- * Applies player damage and triggers game over if needed.
+ * Creates one image element.
  *
- * @param {object} App - Main application state.
- * @param {number} amount - Damage amount.
+ * @param {string} src - Image source path.
+ * @returns {HTMLImageElement}
  */
-function applyDamage(App, amount) {
-  if (!canTakeDamage(App, nowMs())) return;
-  App.playerHealth -= amount;
-  App.playerHealth = Math.max(0, App.playerHealth);
-  App.lastHitTime = nowMs();
-  safePlay(App, App.audio.hurt);
-  if (App.playerHealth <= 0) loseGame(App);
+function createNaturImage(src) {
+  const image = new Image();
+  image.src = src;
+  return image;
 }
 
 /**
- * Syncs pause state and music playback.
+ * Returns walk image paths.
  *
- * @param {object} App - Main application state.
+ * @returns {string[]}
  */
-function syncPauseAudio(App) {
-  if (App.paused) stopBackgroundMusic(App);
-  if (!App.paused) startBackgroundMusic(App);
+function getNaturWalkPaths() {
+  return [
+    "img/2_character_pepe/2_walk/W-21.png",
+    "img/2_character_pepe/2_walk/W-22.png",
+    "img/2_character_pepe/2_walk/W-23.png",
+    "img/2_character_pepe/2_walk/W-24.png",
+    "img/2_character_pepe/2_walk/W-25.png",
+    "img/2_character_pepe/2_walk/W-26.png",
+  ];
 }
 
 /**
- * Syncs sound state with UI and audio system.
+ * Returns jump image paths.
  *
- * @param {object} App - Main application state.
+ * @returns {string[]}
  */
-function enableSound(App) {
-  App.soundOn = !App.soundOn;
-  localStorage.setItem("soundOn", String(App.soundOn));
-  applyMuteState(App);
-  window.Screen.setSoundIcons(App.soundOn);
+function getNaturJumpPaths() {
+  return [
+    "img/2_character_pepe/3_jump/J-31.png",
+    "img/2_character_pepe/3_jump/J-32.png",
+    "img/2_character_pepe/3_jump/J-33.png",
+    "img/2_character_pepe/3_jump/J-34.png",
+    "img/2_character_pepe/3_jump/J-35.png",
+    "img/2_character_pepe/3_jump/J-36.png",
+    "img/2_character_pepe/3_jump/J-37.png",
+    "img/2_character_pepe/3_jump/J-38.png",
+    "img/2_character_pepe/3_jump/J-39.png",
+  ];
+}
 
-  if (App.soundOn) startBackgroundMusic(App);
-  if (!App.soundOn) stopBackgroundMusic(App);
+/**
+ * Returns hurt image paths.
+ *
+ * @returns {string[]}
+ */
+function getNaturHurtPaths() {
+  return [
+    "img/2_character_pepe/4_hurt/H-41.png",
+    "img/2_character_pepe/4_hurt/H-42.png",
+    "img/2_character_pepe/4_hurt/H-43.png",
+  ];
+}
+
+/**
+ * Returns throw image paths.
+ *
+ * @returns {string[]}
+ */
+function getNaturThrowPaths() {
+  return [
+    "img/2_character_pepe/2_walk/W-21.png",
+    "img/2_character_pepe/2_walk/W-22.png",
+    "img/2_character_pepe/2_walk/W-23.png",
+  ];
+}
+
+/**
+ * Returns sleep image paths.
+ *
+ * @returns {string[]}
+ */
+function getNaturSleepPaths() {
+  return [
+    "img/2_character_pepe/1_idle/long_idle/I-11.png",
+    "img/2_character_pepe/1_idle/long_idle/I-12.png",
+    "img/2_character_pepe/1_idle/long_idle/I-13.png",
+    "img/2_character_pepe/1_idle/long_idle/I-14.png",
+    "img/2_character_pepe/1_idle/long_idle/I-15.png",
+    "img/2_character_pepe/1_idle/long_idle/I-16.png",
+    "img/2_character_pepe/1_idle/long_idle/I-17.png",
+    "img/2_character_pepe/1_idle/long_idle/I-18.png",
+    "img/2_character_pepe/1_idle/long_idle/I-19.png",
+    "img/2_character_pepe/1_idle/long_idle/I-20.png",
+  ];
 }

@@ -385,7 +385,7 @@ canvas {
 
 /* Loading */
 .screen-loading {
-  background: rgba(248, 237, 237, 0.95);
+  background: rgb(248, 237, 237);
   display: grid;
   place-items: center;
   gap: 16px;

@@ -3,7 +3,7 @@
  */
 function initPlayerModule() {
   ensureBaseEntityExists();
-  registerPlayerApi();
+  registerPlayerApi(createPlayerClass());
 }
 
 /**
