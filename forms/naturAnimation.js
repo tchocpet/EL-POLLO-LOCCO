@@ -235,35 +235,81 @@ function updateNaturSleepAnimation(natur, dtMs) {
  * @returns {HTMLImageElement|null}
  */
 function getCurrentNaturImage(natur, assets) {
-  if (hasNaturThrowImage(natur)) {
-    return natur.images.throw[natur.anim.throwFrame];
-  }
+  return (
+    getNaturThrowImage(natur) ||
+    getNaturHurtImage(natur) ||
+    getNaturJumpImage(natur) ||
+    getNaturWalkImageSafe(natur, assets) ||
+    getNaturSleepOrIdleImage(natur) ||
+    getNaturAssetIdleImage(assets)
+  );
+}
 
-  if (hasNaturHurtImage(natur)) {
-    return natur.images.hurt[natur.anim.hurtFrame];
-  }
+/**
+ * Returns the current throw image.
+ *
+ * @param {object} natur - Player instance.
+ * @returns {HTMLImageElement|null}
+ */
+function getNaturThrowImage(natur) {
+  if (!hasNaturThrowImage(natur)) return null;
+  return natur.images.throw[natur.anim.throwFrame] || null;
+}
 
-  if (isNaturJumping(natur)) {
-    return natur.images.jump[natur.anim.jumpFrame] || null;
-  }
+/**
+ * Returns the current hurt image.
+ *
+ * @param {object} natur - Player instance.
+ * @returns {HTMLImageElement|null}
+ */
+function getNaturHurtImage(natur) {
+  if (!hasNaturHurtImage(natur)) return null;
+  return natur.images.hurt[natur.anim.hurtFrame] || null;
+}
 
-  if (isNaturWalking(natur)) {
-    return getNaturWalkImage(natur, assets);
-  }
+/**
+ * Returns the current jump image.
+ *
+ * @param {object} natur - Player instance.
+ * @returns {HTMLImageElement|null}
+ */
+function getNaturJumpImage(natur) {
+  if (!isNaturJumping(natur)) return null;
+  return natur.images.jump[natur.anim.jumpFrame] || null;
+}
 
-  if (hasNaturSleepImage(natur)) {
-    return natur.images.sleep[natur.anim.sleepFrame];
-  }
+/**
+ * Returns the current walk image.
+ *
+ * @param {object} natur - Player instance.
+ * @param {object} assets - Asset collection.
+ * @returns {HTMLImageElement|null}
+ */
+function getNaturWalkImageSafe(natur, assets) {
+  if (!isNaturWalking(natur)) return null;
+  return getNaturWalkImage(natur, assets);
+}
 
-  if (hasNaturIdleImage(natur)) {
-    return natur.images.idle;
-  }
-
-  if (assets.playerIdle) {
-    return assets.playerIdle;
-  }
-
+/**
+ * Returns the current sleep or idle image.
+ *
+ * @param {object} natur - Player instance.
+ * @returns {HTMLImageElement|null}
+ */
+function getNaturSleepOrIdleImage(natur) {
+  if (natur.sleepMode) return natur.images.idle || null;
+  if (hasNaturIdleImage(natur)) return natur.images.idle || null;
   return null;
+}
+
+/**
+ * Returns the fallback idle asset.
+ *
+ * @param {object} assets - Asset collection.
+ * @returns {HTMLImageElement|null}
+ */
+function getNaturAssetIdleImage(assets) {
+  return assets.playerIdle || null;
 }
 
 /**
@@ -286,17 +332,6 @@ function hasNaturThrowImage(natur) {
 function hasNaturHurtImage(natur) {
   if (natur.hurtTime <= 0) return false;
   return !!natur.images.hurt[natur.anim.hurtFrame];
-}
-
-/**
- * Returns whether a sleep image is available.
- *
- * @param {object} natur - Player instance.
- * @returns {boolean}
- */
-function hasNaturSleepImage(natur) {
-  if (!natur.sleepMode) return false;
-  return !!natur.images.sleep[natur.anim.sleepFrame];
 }
 
 /**

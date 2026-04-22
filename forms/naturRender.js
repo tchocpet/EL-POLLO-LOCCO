@@ -32,7 +32,7 @@ function drawNaturFallback(natur, ctx) {
 }
 
 /**
- * Draws the sleep label above the player.
+ * Draws a small sleep letter near the player's head.
  *
  * @param {object} natur - Player instance.
  * @param {CanvasRenderingContext2D} ctx - Canvas context.
@@ -40,13 +40,11 @@ function drawNaturFallback(natur, ctx) {
 function drawNaturSleepText(natur, ctx) {
   if (!natur.sleepMode) return;
 
-  const yOffset = Math.sin(natur.sleepFloat) * 3;
-  const xOffset = Math.sin(natur.sleepWave) * 2;
+  const yOffset = Math.sin(natur.sleepFloat) * 2;
 
   ctx.save();
-  ctx.font = "20px Arial";
+  ctx.font = "16px Arial";
   ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-  ctx.fillText("Zzz", natur.x + 108 + xOffset, natur.y - 42 + yOffset);
-  ctx.fillText("😴", natur.x + 128 + xOffset, natur.y - 72 + yOffset);
+  ctx.fillText("z", natur.x + 75, natur.y - 25 + yOffset);
   ctx.restore();
 }
