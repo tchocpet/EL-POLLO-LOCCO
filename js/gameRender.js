@@ -204,6 +204,8 @@ function drawCoinsScene(App) {
  * @param {object} App - Main application state.
  */
 function drawGroundBottlesScene(App) {
+  if (App.player && App.player.isIntroDropping) return;
+
   App.groundBottles.forEach((bottle) => {
     if (!bottle.collected) bottle.draw(App.ctx);
   });
